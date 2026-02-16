@@ -133,19 +133,13 @@ function parsePerformance(rows) {
   const currentMonthIdx = detectCurrentMonth(findRow(rows, "Total Closed MRR"));
 
   // Get target percentages and annual values from column 14 (Total/Average)
-  const refTargetPctRow = findRow(refRows, "Referrals Growth Target %");
-  const resTargetPctRow = findRow(resRows, "Resellers Growth Target %");
-  const agTargetPctRow = findRow(agRows, "Agencies Growth Target %");
-  const refTargetAnnualRow = findRow(refRows, "Referrals Growth Target MRR");
-  const resTargetAnnualRow = findRow(resRows, "Resellers Growth Target MRR");
-  const agTargetAnnualRow = findRow(agRows, "Agencies Growth Target MRR");
-
-  const refTargetPct = refTargetPctRow ? num(refTargetPctRow[14]) : 0.3;
-  const resTargetPct = resTargetPctRow ? num(resTargetPctRow[14]) : 0.6;
-  const agTargetPct = agTargetPctRow ? num(agTargetPctRow[14]) : 0.1;
-  const refTargetAnnual = refTargetAnnualRow ? num(refTargetAnnualRow[14]) : 0;
-  const resTargetAnnual = resTargetAnnualRow ? num(resTargetAnnualRow[14]) : 0;
-  const agTargetAnnual = agTargetAnnualRow ? num(agTargetAnnualRow[14]) : 0;
+  // Rows are at fixed positions: 19=RefPct, 20=RefMRR, 21=ResPct, 22=ResMRR, 23=AgPct, 24=AgMRR
+  const refTargetPct = rows[19] ? num(rows[19][14]) : 0.3;
+  const refTargetAnnual = rows[20] ? num(rows[20][14]) : 0;
+  const resTargetPct = rows[21] ? num(rows[21][14]) : 0.6;
+  const resTargetAnnual = rows[22] ? num(rows[22][14]) : 0;
+  const agTargetPct = rows[23] ? num(rows[23][14]) : 0.1;
+  const agTargetAnnual = rows[24] ? num(rows[24][14]) : 0;
 
   return {
     currentMonthIdx,
