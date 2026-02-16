@@ -97,7 +97,7 @@ function detectCurrentMonth(mrrRow) {
 }
 
 function parsePerformance(rows) {
-  const totalClosedADV = getMonthlyValues(findRow(rows, "Total Closed ADV"));
+  const totalClosedADV = getMonthlyValues(findRow(rows, "Total Closed ARR"));
   const totalClosedMRR = getMonthlyValues(findRow(rows, "Total Closed MRR"));
   const totalTargetMRR = getMonthlyValues(findRow(rows, "Total Target MRR"));
   const companyGrowthMRR = getMonthlyValues(findRow(rows, "Company Growth Target MRR"));
@@ -106,21 +106,21 @@ function parsePerformance(rows) {
   // Referrals
   const refSection = rows.findIndex((r) => r[1] && r[1].trim() === "Referrals Performance");
   const refRows = refSection >= 0 ? rows.slice(refSection) : [];
-  const refClosedADV = getMonthlyValues(findRow(refRows, "Deals Closed ADV"));
+  const refClosedADV = getMonthlyValues(findRow(refRows, "Deals Closed ARR"));
   const refClosedMRR = getMonthlyValues(findRow(refRows, "Deals Closed MRR"));
   const refTarget = getMonthlyValues(findRow(refRows, "Monthly Target"));
 
   // Resellers
   const resSection = rows.findIndex((r) => r[1] && r[1].trim() === "Resellers Performance");
   const resRows = resSection >= 0 ? rows.slice(resSection) : [];
-  const resClosedADV = getMonthlyValues(findRow(resRows, "Deals Closed ADV"));
+  const resClosedADV = getMonthlyValues(findRow(resRows, "Deals Closed ARR"));
   const resClosedMRR = getMonthlyValues(findRow(resRows, "Deals Closed MRR"));
   const resTarget = getMonthlyValues(findRow(resRows, "Monthly Target"));
 
   // Agencies
   const agSection = rows.findIndex((r) => r[1] && r[1].trim() === "Agencies Performance");
   const agRows = agSection >= 0 ? rows.slice(agSection) : [];
-  const agClosedADV = getMonthlyValues(findRow(agRows, "Deals Closed ADV"));
+  const agClosedADV = getMonthlyValues(findRow(agRows, "Deals Closed ARR"));
   const agClosedMRR = getMonthlyValues(findRow(agRows, "Deals Closed MRR"));
   const agTarget = getMonthlyValues(findRow(agRows, "Monthly Target"));
 
