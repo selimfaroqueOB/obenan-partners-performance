@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid, Legend,
+  LineChart, Line, CartesianGrid, Legend, PieChart, Pie, Cell,
 } from "recharts";
 import { fetchAllData } from "./fetchData.js";
 import {
@@ -380,6 +380,167 @@ export default function App() {
             );
           })}
         </div>
+
+        {/* Pie Charts Row */}
+        {(() => {
+          const allocationData = [
+            { name: "Referrals", value: 30, color: CHANNEL_COLORS.Referrals },
+            { name: "Resellers", value: 60, color: CHANNEL_COLORS.Resellers },
+            { name: "Agencies", value: 10, color: CHANNEL_COLORS.Agencies },
+          ];
+          const annualTargetData = [
+            { name: "Referrals", value: PERF.referrals.targetMRR.reduce((a, b) => a + b, 0), color: CHANNEL_COLORS.Referrals },
+            { name: "Resellers", value: PERF.resellers.targetMRR.reduce((a, b) => a + b, 0), color: CHANNEL_COLORS.Resellers },
+            { name: "Agencies", value: PERF.agencies.targetMRR.reduce((a, b) => a + b, 0), color: CHANNEL_COLORS.Agencies },
+          ];
+          const totalAnnualTarget = annualTargetData.reduce((a, b) => a + b.value, 0);
+          const partnerDistData = [
+            { name: "Referrals", value: PARTNERS.referrals.length, color: CHANNEL_COLORS.Referrals },
+            { name: "Resellers", value: PARTNERS.resellers.length, color: CHANNEL_COLORS.Resellers },
+            { name: "Agencies", value: PARTNERS.agencies.length, color: CHANNEL_COLORS.Agencies },
+          ];
+          const totalPartners = partnerDistData.reduce((a, b) => a + b.value, 0);
+
+          const pieCardStyle = {
+            flex: 1, minWidth: 280, background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 24,
+          };
+
+          const legendStyle = {
+            display: "flex", flexDirection: "column", gap: 8, justifyContent: "center",
+          };
+
+          const legendItemStyle = {
+            display: "flex", alignItems: "center", gap: 8, fontSize: 13,
+          };
+
+          const legendDotStyle = (color) => ({
+            width: 10, height: 10, borderRadius: "50%", background: color,
+          });
+
+          return (
+            <div style={{ display: "flex", gap: 16, marginBottom: 40, flexWrap: "wrap" }}>
+              {/* Target Allocation */}
+              <div style={pieCardStyle}>
+                <SectionTitle sub="MRR split across partner types">Target Allocation</SectionTitle>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <ResponsiveContainer width={160} height={160}>
+                    <PieChart>
+                      <Pie
+                        data={allocationData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={70}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {allocationData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div style={legendStyle}>
+                    {allocationData.map((entry, i) => (
+                      <div key={i} style={legendItemStyle}>
+                        <div style={legendDotStyle(entry.color)} />
+                        <span style={{ color: "#8B95A5" }}>{entry.name}</span>
+                        <span style={{ color: "#F0F2F5", fontWeight: 600, marginLeft: "auto" }}>{entry.value}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Annual MRR Target */}
+              <div style={pieCardStyle}>
+                <SectionTitle sub="Full year target by channel">Annual MRR Target</SectionTitle>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ position: "relative" }}>
+                    <ResponsiveContainer width={160} height={160}>
+                      <PieChart>
+                        <Pie
+                          data={annualTargetData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={70}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {annualTargetData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{
+                      position: "absolute", top: "50%", left: "50%",
+                      transform: "translate(-50%, -50%)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#F0F2F5" }}>{fmt(totalAnnualTarget)}</div>
+                      <div style={{ fontSize: 10, color: "#6B7585" }}>Total</div>
+                    </div>
+                  </div>
+                  <div style={legendStyle}>
+                    {annualTargetData.map((entry, i) => (
+                      <div key={i} style={legendItemStyle}>
+                        <div style={legendDotStyle(entry.color)} />
+                        <span style={{ color: "#8B95A5" }}>{entry.name}</span>
+                        <span style={{ color: "#F0F2F5", fontWeight: 600, marginLeft: "auto" }}>{fmtFull(Math.round(entry.value))}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Partner Distribution */}
+              <div style={pieCardStyle}>
+                <SectionTitle sub="Number of partners by channel">Partner Distribution</SectionTitle>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ position: "relative" }}>
+                    <ResponsiveContainer width={160} height={160}>
+                      <PieChart>
+                        <Pie
+                          data={partnerDistData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={70}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {partnerDistData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{
+                      position: "absolute", top: "50%", left: "50%",
+                      transform: "translate(-50%, -50%)",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#F0F2F5" }}>{totalPartners}</div>
+                      <div style={{ fontSize: 10, color: "#6B7585" }}>Total</div>
+                    </div>
+                  </div>
+                  <div style={legendStyle}>
+                    {partnerDistData.map((entry, i) => (
+                      <div key={i} style={legendItemStyle}>
+                        <div style={legendDotStyle(entry.color)} />
+                        <span style={{ color: "#8B95A5" }}>{entry.name}</span>
+                        <span style={{ color: "#F0F2F5", fontWeight: 600, marginLeft: "auto" }}>{entry.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Charts Row */}
         <div style={{ display: "flex", gap: 24, marginBottom: 40, flexWrap: "wrap" }}>
