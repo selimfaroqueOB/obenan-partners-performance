@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid,
+  LineChart, Line, CartesianGrid, Legend,
 } from "recharts";
 import { fetchAllData } from "./fetchData.js";
 import {
@@ -188,7 +188,8 @@ export default function App() {
   }, [allPartners, selectedChannel, showInactive, partnerSort]);
 
   const inactivePartnersByCountry = useMemo(() => {
-    const inactive = allPartners.filter(p => p.arr === 0 && p.arr2026 === 0);
+    // Include partners with no ARR/activity OR without contracts
+    const inactive = allPartners.filter(p => (p.arr === 0 && p.arr2026 === 0) || p.contract === "X");
     const grouped = {};
     inactive.forEach(p => {
       const country = p.country || "Unknown";
@@ -251,7 +252,7 @@ export default function App() {
     return { month: m, "Actual Cumulative": i <= currentMonthIdx ? actual : null, "Target Cumulative": target };
   });
 
-  const inactiveCount = allPartners.filter(p => p.arr === 0 && p.arr2026 === 0).length;
+  const inactiveCount = allPartners.filter(p => (p.arr === 0 && p.arr2026 === 0) || p.contract === "X").length;
   const activeCount = allPartners.length - inactiveCount;
 
   const btnStyle = (active) => ({
@@ -386,16 +387,20 @@ export default function App() {
             border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 24,
           }}>
             <SectionTitle sub="Monthly closed MRR by channel vs. total target">Monthly Performance</SectionTitle>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={320}>
               <ComposedChart data={channelData} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                 <XAxis dataKey="month" tick={{ fill: "#6B7585", fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#6B7585", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="Referrals Actual" stackId="a" fill={CHANNEL_COLORS.Referrals} />
-                <Bar dataKey="Resellers Actual" stackId="a" fill={CHANNEL_COLORS.Resellers} />
-                <Bar dataKey="Agencies Actual" stackId="a" fill={CHANNEL_COLORS.Agencies} radius={[4,4,0,0]} />
-                <Line type="monotone" dataKey="Target" stroke="#F0F2F5" strokeWidth={2} strokeDasharray="6 4" dot={false} />
+                <Legend
+                  wrapperStyle={{ paddingTop: 16 }}
+                  formatter={(value) => <span style={{ color: "#8B95A5", fontSize: 12 }}>{value.replace(" Actual", "")}</span>}
+                />
+                <Bar dataKey="Referrals Actual" stackId="a" fill={CHANNEL_COLORS.Referrals} name="Referrals Actual" />
+                <Bar dataKey="Resellers Actual" stackId="a" fill={CHANNEL_COLORS.Resellers} name="Resellers Actual" />
+                <Bar dataKey="Agencies Actual" stackId="a" fill={CHANNEL_COLORS.Agencies} radius={[4,4,0,0]} name="Agencies Actual" />
+                <Line type="monotone" dataKey="Target" stroke="#F0F2F5" strokeWidth={2} strokeDasharray="6 4" dot={false} name="Target" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -441,17 +446,18 @@ export default function App() {
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                   {[
-                    { key: "name", label: "Partner" },
-                    { key: null, label: "Channel" },
-                    { key: null, label: "Country" },
-                    { key: "arr", label: "ARR Closed Until 2025" },
-                    { key: "mrrAvg", label: "Avg Monthly MRR" },
-                    { key: "mrr2026", label: "2026 YTD MRR" },
-                    { key: null, label: MONTHS[currentMonthIdx] },
-                    { key: null, label: "Commission" },
+                    { key: "name", label: "Partner", align: "left" },
+                    { key: null, label: "Channel", align: "left" },
+                    { key: null, label: "Country", align: "left" },
+                    { key: null, label: "Contract", align: "center" },
+                    { key: "arr", label: "ARR Closed Until 2025", align: "right" },
+                    { key: "mrrAvg", label: "Avg Monthly MRR", align: "right" },
+                    { key: "mrr2026", label: "2026 YTD MRR", align: "right" },
+                    { key: null, label: MONTHS[currentMonthIdx], align: "right" },
+                    { key: null, label: "Commission", align: "left" },
                   ].map((col, i) => (
                     <th key={i} onClick={() => col.key && setPartnerSort(col.key)} style={{
-                      padding: "12px 14px", textAlign: i >= 3 ? "right" : "left",
+                      padding: "12px 14px", textAlign: col.align,
                       color: partnerSort === col.key ? "#7CB5E8" : "#6B7585",
                       fontWeight: 600, fontSize: 11, textTransform: "uppercase",
                       letterSpacing: "0.08em", cursor: col.key ? "pointer" : "default",
@@ -472,6 +478,9 @@ export default function App() {
                     </td>
                     <td style={{ padding: "12px 14px" }}><ChannelBadge channel={p.channel} /></td>
                     <td style={{ padding: "12px 14px", color: "#8B95A5" }}>{p.country}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 600, color: p.contract === "V" ? "#4ADE80" : "#F87171" }}>
+                      {p.contract || "V"}
+                    </td>
                     <td style={{ padding: "12px 14px", textAlign: "right", fontFamily: "monospace", fontSize: 13 }}>
                       {p.arr > 0 ? fmtFull(p.arr) : <span style={{ color: "#334155" }}>—</span>}
                     </td>
@@ -496,7 +505,7 @@ export default function App() {
                   </tr>
                 ))}
                 {filteredPartners.length === 0 && (
-                  <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#6B7585" }}>No partners match the current filter</td></tr>
+                  <tr><td colSpan={9} style={{ padding: 40, textAlign: "center", color: "#6B7585" }}>No partners match the current filter</td></tr>
                 )}
               </tbody>
             </table>
@@ -511,7 +520,7 @@ export default function App() {
           background: "rgba(232,146,124,0.08)", border: "1px solid rgba(232,146,124,0.2)",
           borderRadius: 16, padding: 24,
         }}>
-          <SectionTitle sub={`${inactiveCount} partners have generated zero ARR historically and zero in 2026`}>
+          <SectionTitle sub={`${inactiveCount} partners have generated zero ARR or have no contract`}>
             Inactive Partners Requiring Attention
           </SectionTitle>
           {inactivePartnersByCountry.map(([country, partners]) => (
@@ -524,8 +533,12 @@ export default function App() {
                   <span key={i} style={{
                     padding: "4px 10px", borderRadius: 6, fontSize: 12,
                     background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#8B95A5",
+                    display: "flex", alignItems: "center", gap: 6,
                   }}>
                     {p.name}
+                    {p.contract === "X" && (
+                      <span style={{ color: "#F87171", fontWeight: 600 }}>✗</span>
+                    )}
                   </span>
                 ))}
               </div>

@@ -144,13 +144,15 @@ function parsePartnerSheet(rows, nameLabel) {
   const headerIdx = rows.findIndex((r) => r[1] && r[1].trim() === nameLabel);
   if (headerIdx < 0) return [];
 
+  // Find "No Agreement" row to determine contract status
   const noAgreementIdx = rows.findIndex((r, i) => i > headerIdx && r[1] && r[1].trim() === "No Agreement");
-  const endIdx = noAgreementIdx > 0 ? noAgreementIdx : rows.length;
 
   const partners = [];
-  for (let i = headerIdx + 1; i < endIdx; i++) {
+  for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i];
     const name = r[1] ? r[1].trim() : "";
+
+    // Skip empty rows and the "No Agreement" header row itself
     if (!name || name === "" || name === "No Agreement") continue;
 
     const country = r[2] ? r[2].trim() : "";
@@ -159,7 +161,9 @@ function parsePartnerSheet(rows, nameLabel) {
     const mrrAvg = num(r[10]);
 
     const mrr2026 = Array.from({ length: 12 }, (_, m) => num(r[m + 11]));
-    const arr2026 = mrr2026.reduce((a, b) => a + b, 0) * 12;
+
+    // Contract status: "V" if before "No Agreement", "X" if after
+    const hasContract = noAgreementIdx < 0 || i < noAgreementIdx;
 
     partners.push({
       name,
@@ -170,6 +174,7 @@ function parsePartnerSheet(rows, nameLabel) {
       mrr2026,
       commission: commission.length > 40 ? commission.substring(0, 40) + "..." : commission,
       start: r[6] ? r[6].trim().substring(0, 7) : "-",
+      contract: hasContract ? "V" : "X",
     });
   }
   return partners;
