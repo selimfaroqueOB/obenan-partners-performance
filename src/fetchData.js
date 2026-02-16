@@ -202,7 +202,7 @@ function parsePartnerSheet(rows, nameLabel) {
       name,
       country,
       contactPerson,
-      commission: commissionRaw.length > 60 ? commissionRaw.substring(0, 60) + "..." : commissionRaw,
+      commission: commissionRaw.length > 120 ? commissionRaw.substring(0, 120) + "..." : commissionRaw,
       start: startDate,
       arr: closedARRUntil2025,
       mrrAvg,

@@ -773,7 +773,7 @@ export default function App() {
                         { key: "channel", label: "Channel", align: "left" },
                         { key: null, label: "Country", align: "left" },
                         { key: null, label: "Contact Person", align: "left" },
-                        { key: null, label: "Commission Structure", align: "left" },
+                        { key: null, label: "Commission Structure", align: "left", minWidth: 300 },
                         { key: null, label: "Start Date", align: "left" },
                         { key: null, label: "Contract", align: "center" },
                       ].map((col, i) => (
@@ -782,7 +782,8 @@ export default function App() {
                           color: partnerSort === col.key ? "#7CB5E8" : "#6B7585",
                           fontWeight: 600, fontSize: 11, textTransform: "uppercase",
                           letterSpacing: "0.08em", cursor: col.key ? "pointer" : "default",
-                          whiteSpace: "nowrap", userSelect: "none",
+                          whiteSpace: col.minWidth ? "normal" : "nowrap", userSelect: "none",
+                          minWidth: col.minWidth || "auto",
                         }}>
                           {col.label} {partnerSort === col.key ? "↓" : ""}
                         </th>
@@ -798,7 +799,7 @@ export default function App() {
                         <td style={{ padding: "12px 14px" }}><ChannelBadge channel={p.channel} /></td>
                         <td style={{ padding: "12px 14px", color: "#8B95A5" }}>{p.country || "—"}</td>
                         <td style={{ padding: "12px 14px", color: "#8B95A5" }}>{p.contactPerson || "—"}</td>
-                        <td style={{ padding: "12px 14px", color: "#8B95A5", fontSize: 12, maxWidth: 200 }}>{p.commission || "—"}</td>
+                        <td style={{ padding: "12px 14px", color: "#8B95A5", fontSize: 12, minWidth: 300, whiteSpace: "normal" }}>{p.commission || "—"}</td>
                         <td style={{ padding: "12px 14px", color: "#8B95A5", fontFamily: "monospace" }}>{p.start || "—"}</td>
                         <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 600, color: p.contract === "V" ? "#4ADE80" : "#F87171" }}>
                           {p.contract}
