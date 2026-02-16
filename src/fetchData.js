@@ -73,14 +73,19 @@ function parseCSVRow(row) {
 
 function num(val) {
   if (!val || val === "" || val === "-") return 0;
-  // Remove quotes, commas, currency symbols, and whitespace
-  const cleaned = val.replace(/["'€$£,\s]/g, "");
-  const n = parseFloat(cleaned);
-  return isNaN(n) ? 0 : n;
+  // Handle percentage strings like "30%" or "9.0%"
+  const isPercent = val.includes("%");
+  // Remove quotes, commas, currency symbols, percentage signs, and whitespace
+  const cleaned = val.replace(/["'€$£,%\s]/g, "");
+  let n = parseFloat(cleaned);
+  if (isNaN(n)) return 0;
+  // Convert percentage to decimal (30% -> 0.3)
+  if (isPercent) n = n / 100;
+  return n;
 }
 
 function findRow(rows, label) {
-  return rows.find((r) => r[1] && r[1].trim() === label);
+  return rows.find((r) => r[1] && r[1].trim().includes(label));
 }
 
 function getMonthlyValues(row) {
@@ -105,21 +110,21 @@ function parsePerformance(rows) {
   const companyGrowthPct = getMonthlyValues(findRow(rows, "Company Growth Target %"));
 
   // Referrals
-  const refSection = rows.findIndex((r) => r[1] && r[1].trim() === "Referrals Performance");
+  const refSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Referrals Performance"));
   const refRows = refSection >= 0 ? rows.slice(refSection) : [];
   const refClosedARR = getMonthlyValues(findRow(refRows, "Deals Closed ARR"));
   const refClosedMRR = getMonthlyValues(findRow(refRows, "Deals Closed MRR"));
   const refTarget = getMonthlyValues(findRow(refRows, "Monthly Target"));
 
   // Resellers
-  const resSection = rows.findIndex((r) => r[1] && r[1].trim() === "Resellers Performance");
+  const resSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Resellers Performance"));
   const resRows = resSection >= 0 ? rows.slice(resSection) : [];
   const resClosedARR = getMonthlyValues(findRow(resRows, "Deals Closed ARR"));
   const resClosedMRR = getMonthlyValues(findRow(resRows, "Deals Closed MRR"));
   const resTarget = getMonthlyValues(findRow(resRows, "Monthly Target"));
 
   // Agencies
-  const agSection = rows.findIndex((r) => r[1] && r[1].trim() === "Agencies Performance");
+  const agSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Agencies Performance"));
   const agRows = agSection >= 0 ? rows.slice(agSection) : [];
   const agClosedARR = getMonthlyValues(findRow(agRows, "Deals Closed ARR"));
   const agClosedMRR = getMonthlyValues(findRow(agRows, "Deals Closed MRR"));
@@ -162,11 +167,11 @@ function parsePerformance(rows) {
 }
 
 function parsePartnerSheet(rows, nameLabel) {
-  const headerIdx = rows.findIndex((r) => r[1] && r[1].trim() === nameLabel);
+  const headerIdx = rows.findIndex((r) => r[1] && r[1].trim().includes(nameLabel));
   if (headerIdx < 0) return [];
 
   // Find "No Agreement" row to determine contract status
-  const noAgreementIdx = rows.findIndex((r, i) => i > headerIdx && r[1] && r[1].trim() === "No Agreement");
+  const noAgreementIdx = rows.findIndex((r, i) => i > headerIdx && r[1] && r[1].trim().includes("No Agreement"));
 
   const partners = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -174,7 +179,7 @@ function parsePartnerSheet(rows, nameLabel) {
     const name = r[1] ? r[1].trim() : "";
 
     // Skip empty rows and the "No Agreement" header row itself
-    if (!name || name === "" || name === "No Agreement") continue;
+    if (!name || name === "" || name.includes("No Agreement")) continue;
 
     const country = r[2] ? r[2].trim() : "";
     const commission = r[4] ? r[4].trim() : "";
