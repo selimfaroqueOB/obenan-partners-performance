@@ -179,6 +179,7 @@ export default function App() {
     if (!showInactive) list = list.filter(p => p.arr > 0 || p.arr2026 > 0);
     list = [...list].sort((a, b) => {
       if (partnerSort === "mrr2026") return b.ytdMRR - a.ytdMRR || b.arr - a.arr;
+      if (partnerSort === "mrrMonthly") return (b.ytdMRR / 12) - (a.ytdMRR / 12) || b.arr - a.arr;
       if (partnerSort === "arr") return b.arr - a.arr;
       if (partnerSort === "mrrAvg") return b.mrrAvg - a.mrrAvg;
       if (partnerSort === "name") return a.name.localeCompare(b.name);
@@ -452,7 +453,8 @@ export default function App() {
                     { key: null, label: "Contract", align: "center" },
                     { key: "arr", label: "ARR Closed Until 2025", align: "right" },
                     { key: "mrrAvg", label: "Avg Monthly MRR", align: "right" },
-                    { key: "mrr2026", label: "2026 YTD MRR", align: "right" },
+                    { key: "mrr2026", label: "2026 YTD ARR", align: "right" },
+                    { key: "mrrMonthly", label: "2026 YTD MRR", align: "right" },
                     { key: null, label: MONTHS[currentMonthIdx], align: "right" },
                     { key: null, label: "Commission", align: "left" },
                   ].map((col, i) => (
@@ -495,6 +497,12 @@ export default function App() {
                     </td>
                     <td style={{
                       padding: "12px 14px", textAlign: "right", fontFamily: "monospace",
+                      fontSize: 13, color: p.ytdMRR > 0 ? "#F0F2F5" : "#334155",
+                    }}>
+                      {p.ytdMRR > 0 ? fmtFull(Math.round(p.ytdMRR / 12)) : "—"}
+                    </td>
+                    <td style={{
+                      padding: "12px 14px", textAlign: "right", fontFamily: "monospace",
                       fontSize: 13, color: p.mrr2026[currentMonthIdx] > 0 ? "#F0F2F5" : "#334155",
                     }}>
                       {p.mrr2026[currentMonthIdx] > 0 ? fmtFull(p.mrr2026[currentMonthIdx]) : "—"}
@@ -505,7 +513,7 @@ export default function App() {
                   </tr>
                 ))}
                 {filteredPartners.length === 0 && (
-                  <tr><td colSpan={9} style={{ padding: 40, textAlign: "center", color: "#6B7585" }}>No partners match the current filter</td></tr>
+                  <tr><td colSpan={10} style={{ padding: 40, textAlign: "center", color: "#6B7585" }}>No partners match the current filter</td></tr>
                 )}
               </tbody>
             </table>
