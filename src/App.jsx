@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid,
 } from "recharts";
+import { fetchAllData } from "./fetchData.js";
 import {
-  CURRENT_MONTH_IDX, MONTHS, CHANNEL_COLORS, PERF, PARTNERS,
+  CURRENT_MONTH_IDX as FALLBACK_MONTH, MONTHS, CHANNEL_COLORS,
+  PERF as FALLBACK_PERF, PARTNERS as FALLBACK_PARTNERS,
 } from "./data.js";
 
 const fmt = (n) => n >= 1000 ? `€${(n/1000).toFixed(1)}k` : `€${Math.round(n)}`;
@@ -80,13 +82,61 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+function LoadingScreen() {
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#0F1219", color: "#F0F2F5",
+      fontFamily: "'DM Sans', sans-serif",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: 20,
+    }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <div style={{
+        width: 48, height: 48, borderRadius: 12,
+        background: "linear-gradient(135deg, #7CB5E8, #A8D5A2)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 24, fontWeight: 700, color: "#0F1219",
+        animation: "pulse 1.5s ease-in-out infinite",
+      }}>O</div>
+      <div style={{ fontSize: 15, color: "#6B7585" }}>Loading partner data from Google Sheets...</div>
+      <style>{`@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.95); } }`}</style>
+    </div>
+  );
+}
+
 export default function App() {
+  const [PERF, setPERF] = useState(null);
+  const [PARTNERS, setPARTNERS] = useState(null);
+  const [currentMonthIdx, setCurrentMonthIdx] = useState(FALLBACK_MONTH);
+  const [dataSource, setDataSource] = useState("loading");
+  const [lastUpdated, setLastUpdated] = useState(null);
+
   const [selectedChannel, setSelectedChannel] = useState("all");
   const [partnerSort, setPartnerSort] = useState("mrr2026");
   const [showInactive, setShowInactive] = useState(false);
 
+  useEffect(() => {
+    fetchAllData()
+      .then(({ perf, partners }) => {
+        setPERF(perf);
+        setPARTNERS(partners);
+        setCurrentMonthIdx(perf.currentMonthIdx);
+        setDataSource("live");
+        setLastUpdated(new Date());
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch live data, using fallback:", err);
+        setPERF(FALLBACK_PERF);
+        setPARTNERS(FALLBACK_PARTNERS);
+        setCurrentMonthIdx(FALLBACK_MONTH);
+        setDataSource("fallback");
+      });
+  }, []);
+
+  if (!PERF || !PARTNERS) return <LoadingScreen />;
+
   const ytdMRR = PERF.totalClosedMRR.reduce((a, b) => a + b, 0);
-  const ytdTargetMRR = PERF.totalTargetMRR.slice(0, CURRENT_MONTH_IDX + 1).reduce((a, b) => a + b, 0);
+  const ytdTargetMRR = PERF.totalTargetMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0);
   const ytdADV = PERF.totalClosedADV.reduce((a, b) => a + b, 0);
   const achievement = ytdTargetMRR > 0 ? ytdMRR / ytdTargetMRR : 0;
   const variance = ytdMRR - ytdTargetMRR;
@@ -102,24 +152,24 @@ export default function App() {
   const channelSummary = [
     {
       name: "Referrals",
-      actual: PERF.referrals.closedMRR.slice(0, CURRENT_MONTH_IDX + 1).reduce((a, b) => a + b, 0),
-      target: PERF.referrals.targetMRR.slice(0, CURRENT_MONTH_IDX + 1).reduce((a, b) => a + b, 0),
+      actual: PERF.referrals.closedMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
+      target: PERF.referrals.targetMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "30%",
       partners: PARTNERS.referrals.length,
       active: PARTNERS.referrals.filter(p => p.adv > 0 || p.adv2026 > 0).length,
     },
     {
       name: "Resellers",
-      actual: PERF.resellers.closedMRR.slice(0, CURRENT_MONTH_IDX + 1).reduce((a, b) => a + b, 0),
-      target: PERF.resellers.targetMRR.slice(0, CURRENT_MONTH_IDX + 1).reduce((a, b) => a + b, 0),
+      actual: PERF.resellers.closedMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
+      target: PERF.resellers.targetMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "60%",
       partners: PARTNERS.resellers.length,
       active: PARTNERS.resellers.filter(p => p.adv > 0 || p.adv2026 > 0).length,
     },
     {
       name: "Agencies",
-      actual: PERF.agencies.closedMRR.slice(0, CURRENT_MONTH_IDX + 1).reduce((a, b) => a + b, 0),
-      target: PERF.agencies.targetMRR.slice(0, CURRENT_MONTH_IDX + 1).reduce((a, b) => a + b, 0),
+      actual: PERF.agencies.closedMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
+      target: PERF.agencies.targetMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "10%",
       partners: PARTNERS.agencies.length,
       active: PARTNERS.agencies.filter(p => p.adv > 0 || p.adv2026 > 0).length,
@@ -135,7 +185,7 @@ export default function App() {
       });
     });
     return list;
-  }, []);
+  }, [PARTNERS]);
 
   const filteredPartners = useMemo(() => {
     let list = allPartners;
@@ -154,7 +204,7 @@ export default function App() {
   const trendData = MONTHS.map((m, i) => {
     const actual = PERF.totalClosedMRR.slice(0, i + 1).reduce((a, b) => a + b, 0);
     const target = PERF.totalTargetMRR.slice(0, i + 1).reduce((a, b) => a + b, 0);
-    return { month: m, "Actual Cumulative": i <= CURRENT_MONTH_IDX ? actual : null, "Target Cumulative": target };
+    return { month: m, "Actual Cumulative": i <= currentMonthIdx ? actual : null, "Target Cumulative": target };
   });
 
   const inactiveCount = allPartners.filter(p => p.adv === 0 && p.adv2026 === 0).length;
@@ -181,18 +231,33 @@ export default function App() {
         borderBottom: "1px solid rgba(255,255,255,0.06)",
         background: "linear-gradient(180deg, rgba(124,181,232,0.04) 0%, transparent 100%)",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: "linear-gradient(135deg, #7CB5E8, #A8D5A2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 18, fontWeight: 700, color: "#0F1219",
-          }}>O</div>
-          <div>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>Partner Performance</h1>
-            <p style={{ fontSize: 13, color: "#6B7585", margin: "2px 0 0" }}>
-              OBENAN · 2026 · Updated through {MONTHS[CURRENT_MONTH_IDX]}
-            </p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: "linear-gradient(135deg, #7CB5E8, #A8D5A2)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 18, fontWeight: 700, color: "#0F1219",
+            }}>O</div>
+            <div>
+              <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>Partner Performance</h1>
+              <p style={{ fontSize: 13, color: "#6B7585", margin: "2px 0 0" }}>
+                OBENAN · 2026 · Updated through {MONTHS[currentMonthIdx]}
+              </p>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: dataSource === "live" ? "#4ADE80" : dataSource === "fallback" ? "#FBBF24" : "#6B7585",
+            }} />
+            <span style={{ fontSize: 12, color: "#6B7585" }}>
+              {dataSource === "live" && lastUpdated
+                ? `Live · ${lastUpdated.toLocaleTimeString()}`
+                : dataSource === "fallback"
+                ? "Offline mode (cached data)"
+                : "Loading..."}
+            </span>
           </div>
         </div>
       </div>
@@ -327,7 +392,7 @@ export default function App() {
                     { key: "adv", label: "Historical ADV" },
                     { key: "mrrAvg", label: "Avg Monthly MRR" },
                     { key: "mrr2026", label: "2026 YTD MRR" },
-                    { key: null, label: MONTHS[CURRENT_MONTH_IDX] },
+                    { key: null, label: MONTHS[currentMonthIdx] },
                     { key: null, label: "Commission" },
                   ].map((col, i) => (
                     <th key={i} onClick={() => col.key && setPartnerSort(col.key)} style={{
@@ -366,9 +431,9 @@ export default function App() {
                     </td>
                     <td style={{
                       padding: "12px 14px", textAlign: "right", fontFamily: "monospace",
-                      fontSize: 13, color: p.mrr2026[CURRENT_MONTH_IDX] > 0 ? "#F0F2F5" : "#334155",
+                      fontSize: 13, color: p.mrr2026[currentMonthIdx] > 0 ? "#F0F2F5" : "#334155",
                     }}>
-                      {p.mrr2026[CURRENT_MONTH_IDX] > 0 ? fmtFull(p.mrr2026[CURRENT_MONTH_IDX]) : "—"}
+                      {p.mrr2026[currentMonthIdx] > 0 ? fmtFull(p.mrr2026[currentMonthIdx]) : "—"}
                     </td>
                     <td style={{ padding: "12px 14px", color: "#8B95A5", fontSize: 12, whiteSpace: "nowrap" }}>
                       {p.commission}
