@@ -176,7 +176,9 @@ function parsePartnerSheet(rows, nameLabel) {
     if (!name || name === "" || name.includes("No Agreement")) continue;
 
     const country = r[2] ? r[2].trim() : "";
-    const commission = r[4] ? r[4].trim() : "";
+    const contactPerson = r[3] ? r[3].trim() : "";
+    const commissionRaw = r[4] ? r[4].trim() : "";
+    const startDate = r[6] ? r[6].trim().substring(0, 7) : "-";
     const closedARRUntil2025 = num(r[8]);
     const mrrAvg = num(r[10]);
 
@@ -188,12 +190,13 @@ function parsePartnerSheet(rows, nameLabel) {
     partners.push({
       name,
       country,
+      contactPerson,
+      commission: commissionRaw.length > 60 ? commissionRaw.substring(0, 60) + "..." : commissionRaw,
+      start: startDate,
       arr: closedARRUntil2025,
       mrrAvg,
       arr2026: mrr2026.reduce((a, b) => a + b, 0) > 0 ? 1 : 0,
       mrr2026,
-      commission: commission.length > 40 ? commission.substring(0, 40) + "..." : commission,
-      start: r[6] ? r[6].trim().substring(0, 7) : "-",
       contract: hasContract ? "V" : "X",
     });
   }

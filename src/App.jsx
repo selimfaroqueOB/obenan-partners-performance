@@ -706,6 +706,114 @@ export default function App() {
             Consider scheduling check-ins with these partners to assess engagement, or archive those with no pipeline potential.
           </p>
         </div>
+
+        {/* Partners Without Contract */}
+        {(() => {
+          const noContractPartners = allPartners.filter(p => p.contract === "X");
+          const byChannel = {
+            Referrals: noContractPartners.filter(p => p.channel === "Referrals"),
+            Resellers: noContractPartners.filter(p => p.channel === "Resellers"),
+            Agencies: noContractPartners.filter(p => p.channel === "Agencies"),
+          };
+          return (
+            <div style={{
+              background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)",
+              borderRadius: 16, padding: 24, marginTop: 40,
+            }}>
+              <SectionTitle sub={`${noContractPartners.length} partners without signed agreements`}>
+                Partners Without Contract
+              </SectionTitle>
+              {Object.entries(byChannel).map(([channel, partners]) => partners.length > 0 && (
+                <div key={channel} style={{ marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 3, background: CHANNEL_COLORS[channel] }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#8B95A5", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      {channel}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {partners.map((p, i) => (
+                      <span key={i} style={{
+                        padding: "4px 10px", borderRadius: 6, fontSize: 12,
+                        background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#8B95A5",
+                      }}>
+                        {p.name} {p.country && <span style={{ color: "#6B7585" }}>({p.country})</span>}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {noContractPartners.length === 0 && (
+                <p style={{ fontSize: 13, color: "#6B7585" }}>All partners have signed contracts.</p>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Partner Directory */}
+        {(() => {
+          const [dirSort, setDirSort] = [partnerSort, setPartnerSort];
+          const sortedAll = [...allPartners].sort((a, b) => {
+            if (dirSort === "name") return a.name.localeCompare(b.name);
+            if (dirSort === "channel") return a.channel.localeCompare(b.channel);
+            return a.name.localeCompare(b.name);
+          });
+          return (
+            <div style={{
+              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 16, padding: 24, marginTop: 40,
+            }}>
+              <SectionTitle sub="Complete list of all partners with contact and contract details">Partner Directory</SectionTitle>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                      {[
+                        { key: "name", label: "Partner Name", align: "left" },
+                        { key: "channel", label: "Channel", align: "left" },
+                        { key: null, label: "Country", align: "left" },
+                        { key: null, label: "Contact Person", align: "left" },
+                        { key: null, label: "Commission Structure", align: "left" },
+                        { key: null, label: "Start Date", align: "left" },
+                        { key: null, label: "Contract", align: "center" },
+                      ].map((col, i) => (
+                        <th key={i} onClick={() => col.key && setPartnerSort(col.key)} style={{
+                          padding: "12px 14px", textAlign: col.align,
+                          color: partnerSort === col.key ? "#7CB5E8" : "#6B7585",
+                          fontWeight: 600, fontSize: 11, textTransform: "uppercase",
+                          letterSpacing: "0.08em", cursor: col.key ? "pointer" : "default",
+                          whiteSpace: "nowrap", userSelect: "none",
+                        }}>
+                          {col.label} {partnerSort === col.key ? "↓" : ""}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedAll.map((p, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", transition: "background 0.1s" }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                        <td style={{ padding: "12px 14px", fontWeight: 500 }}>{p.name}</td>
+                        <td style={{ padding: "12px 14px" }}><ChannelBadge channel={p.channel} /></td>
+                        <td style={{ padding: "12px 14px", color: "#8B95A5" }}>{p.country || "—"}</td>
+                        <td style={{ padding: "12px 14px", color: "#8B95A5" }}>{p.contactPerson || "—"}</td>
+                        <td style={{ padding: "12px 14px", color: "#8B95A5", fontSize: 12, maxWidth: 200 }}>{p.commission || "—"}</td>
+                        <td style={{ padding: "12px 14px", color: "#8B95A5", fontFamily: "monospace" }}>{p.start || "—"}</td>
+                        <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 600, color: p.contract === "V" ? "#4ADE80" : "#F87171" }}>
+                          {p.contract}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ marginTop: 12, fontSize: 12, color: "#6B7585" }}>
+                Total: {allPartners.length} partners
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
