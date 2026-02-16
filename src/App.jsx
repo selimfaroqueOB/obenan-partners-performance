@@ -133,6 +133,33 @@ export default function App() {
       });
   }, []);
 
+  // useMemo hooks must be called before any early returns to maintain consistent hook ordering
+  const allPartners = useMemo(() => {
+    if (!PARTNERS) return [];
+    const list = [];
+    ["referrals", "resellers", "agencies"].forEach(ch => {
+      (PARTNERS[ch] || []).forEach(p => {
+        const ytd = p.mrr2026.reduce((a, b) => a + b, 0);
+        list.push({ ...p, channel: ch.charAt(0).toUpperCase() + ch.slice(1), ytdMRR: ytd });
+      });
+    });
+    return list;
+  }, [PARTNERS]);
+
+  const filteredPartners = useMemo(() => {
+    let list = allPartners;
+    if (selectedChannel !== "all") list = list.filter(p => p.channel === selectedChannel);
+    if (!showInactive) list = list.filter(p => p.adv > 0 || p.adv2026 > 0);
+    list = [...list].sort((a, b) => {
+      if (partnerSort === "mrr2026") return b.ytdMRR - a.ytdMRR || b.adv - a.adv;
+      if (partnerSort === "adv") return b.adv - a.adv;
+      if (partnerSort === "mrrAvg") return b.mrrAvg - a.mrrAvg;
+      if (partnerSort === "name") return a.name.localeCompare(b.name);
+      return 0;
+    });
+    return list;
+  }, [allPartners, selectedChannel, showInactive, partnerSort]);
+
   if (!PERF || !PARTNERS) return <LoadingScreen />;
 
   const ytdMRR = PERF.totalClosedMRR.reduce((a, b) => a + b, 0);
@@ -175,31 +202,6 @@ export default function App() {
       active: PARTNERS.agencies.filter(p => p.adv > 0 || p.adv2026 > 0).length,
     },
   ];
-
-  const allPartners = useMemo(() => {
-    const list = [];
-    ["referrals", "resellers", "agencies"].forEach(ch => {
-      PARTNERS[ch].forEach(p => {
-        const ytd = p.mrr2026.reduce((a, b) => a + b, 0);
-        list.push({ ...p, channel: ch.charAt(0).toUpperCase() + ch.slice(1), ytdMRR: ytd });
-      });
-    });
-    return list;
-  }, [PARTNERS]);
-
-  const filteredPartners = useMemo(() => {
-    let list = allPartners;
-    if (selectedChannel !== "all") list = list.filter(p => p.channel === selectedChannel);
-    if (!showInactive) list = list.filter(p => p.adv > 0 || p.adv2026 > 0);
-    list.sort((a, b) => {
-      if (partnerSort === "mrr2026") return b.ytdMRR - a.ytdMRR || b.adv - a.adv;
-      if (partnerSort === "adv") return b.adv - a.adv;
-      if (partnerSort === "mrrAvg") return b.mrrAvg - a.mrrAvg;
-      if (partnerSort === "name") return a.name.localeCompare(b.name);
-      return 0;
-    });
-    return list;
-  }, [allPartners, selectedChannel, showInactive, partnerSort]);
 
   const trendData = MONTHS.map((m, i) => {
     const actual = PERF.totalClosedMRR.slice(0, i + 1).reduce((a, b) => a + b, 0);
