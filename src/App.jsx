@@ -176,7 +176,7 @@ export default function App() {
   const filteredPartners = useMemo(() => {
     let list = allPartners;
     if (selectedChannel !== "all") list = list.filter(p => p.channel === selectedChannel);
-    if (!showInactive) list = list.filter(p => p.arr > 0 || p.arr2026 > 0);
+    if (!showInactive) list = list.filter(p => p.mrrAvg > 0 || p.ytdMRR > 0);
     list = [...list].sort((a, b) => {
       if (partnerSort === "mrr2026") return b.ytdMRR - a.ytdMRR || b.arr - a.arr;
       if (partnerSort === "mrrMonthly") return (b.ytdMRR / 12) - (a.ytdMRR / 12) || b.arr - a.arr;
@@ -189,8 +189,8 @@ export default function App() {
   }, [allPartners, selectedChannel, showInactive, partnerSort]);
 
   const inactivePartnersByCountry = useMemo(() => {
-    // Include partners with no ARR/activity OR without contracts
-    const inactive = allPartners.filter(p => (p.arr === 0 && p.arr2026 === 0) || p.contract === "X");
+    // Include partners with no MRR activity OR without contracts
+    const inactive = allPartners.filter(p => (p.mrrAvg === 0 && p.ytdMRR === 0) || p.contract === "X");
     const grouped = {};
     inactive.forEach(p => {
       const country = p.country || "Unknown";
@@ -227,7 +227,7 @@ export default function App() {
       target: PERF.referrals.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "30%",
       partners: PARTNERS.referrals.length,
-      active: PARTNERS.referrals.filter(p => p.arr > 0 || p.arr2026 > 0).length,
+      active: PARTNERS.referrals.filter(p => p.mrrAvg > 0 || p.mrr2026.reduce((a, b) => a + b, 0) > 0).length,
     },
     {
       name: "Resellers",
@@ -235,7 +235,7 @@ export default function App() {
       target: PERF.resellers.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "60%",
       partners: PARTNERS.resellers.length,
-      active: PARTNERS.resellers.filter(p => p.arr > 0 || p.arr2026 > 0).length,
+      active: PARTNERS.resellers.filter(p => p.mrrAvg > 0 || p.mrr2026.reduce((a, b) => a + b, 0) > 0).length,
     },
     {
       name: "Agencies",
@@ -243,7 +243,7 @@ export default function App() {
       target: PERF.agencies.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "10%",
       partners: PARTNERS.agencies.length,
-      active: PARTNERS.agencies.filter(p => p.arr > 0 || p.arr2026 > 0).length,
+      active: PARTNERS.agencies.filter(p => p.mrrAvg > 0 || p.mrr2026.reduce((a, b) => a + b, 0) > 0).length,
     },
   ];
 
@@ -253,7 +253,7 @@ export default function App() {
     return { month: m, "Actual Cumulative": i <= currentMonthIdx ? actual : null, "Target Cumulative": target };
   });
 
-  const inactiveCount = allPartners.filter(p => (p.arr === 0 && p.arr2026 === 0) || p.contract === "X").length;
+  const inactiveCount = allPartners.filter(p => (p.mrrAvg === 0 && p.ytdMRR === 0) || p.contract === "X").length;
   const activeCount = allPartners.length - inactiveCount;
 
   const btnStyle = (active) => ({
@@ -398,10 +398,10 @@ export default function App() {
                   wrapperStyle={{ paddingTop: 16 }}
                   formatter={(value) => <span style={{ color: "#8B95A5", fontSize: 12 }}>{value.replace(" Actual", "")}</span>}
                 />
+                <Bar dataKey="Target" fill="#4A5568" name="Target" radius={[4,4,0,0]} />
                 <Bar dataKey="Referrals Actual" stackId="a" fill={CHANNEL_COLORS.Referrals} name="Referrals Actual" />
                 <Bar dataKey="Resellers Actual" stackId="a" fill={CHANNEL_COLORS.Resellers} name="Resellers Actual" />
                 <Bar dataKey="Agencies Actual" stackId="a" fill={CHANNEL_COLORS.Agencies} radius={[4,4,0,0]} name="Agencies Actual" />
-                <Line type="monotone" dataKey="Target" stroke="#F0F2F5" strokeWidth={2} strokeDasharray="6 4" dot={false} name="Target" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -455,8 +455,6 @@ export default function App() {
                     { key: "mrrAvg", label: "Avg Monthly MRR", align: "right" },
                     { key: "mrr2026", label: "2026 YTD ARR", align: "right" },
                     { key: "mrrMonthly", label: "2026 YTD MRR", align: "right" },
-                    { key: null, label: MONTHS[currentMonthIdx], align: "right" },
-                    { key: null, label: "Commission", align: "left" },
                   ].map((col, i) => (
                     <th key={i} onClick={() => col.key && setPartnerSort(col.key)} style={{
                       padding: "12px 14px", textAlign: col.align,
@@ -501,19 +499,10 @@ export default function App() {
                     }}>
                       {p.ytdMRR > 0 ? fmtFull(Math.round(p.ytdMRR / 12)) : "—"}
                     </td>
-                    <td style={{
-                      padding: "12px 14px", textAlign: "right", fontFamily: "monospace",
-                      fontSize: 13, color: p.mrr2026[currentMonthIdx] > 0 ? "#F0F2F5" : "#334155",
-                    }}>
-                      {p.mrr2026[currentMonthIdx] > 0 ? fmtFull(p.mrr2026[currentMonthIdx]) : "—"}
-                    </td>
-                    <td style={{ padding: "12px 14px", color: "#8B95A5", fontSize: 12, whiteSpace: "nowrap" }}>
-                      {p.commission}
-                    </td>
                   </tr>
                 ))}
                 {filteredPartners.length === 0 && (
-                  <tr><td colSpan={10} style={{ padding: 40, textAlign: "center", color: "#6B7585" }}>No partners match the current filter</td></tr>
+                  <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#6B7585" }}>No partners match the current filter</td></tr>
                 )}
               </tbody>
             </table>
@@ -528,7 +517,7 @@ export default function App() {
           background: "rgba(232,146,124,0.08)", border: "1px solid rgba(232,146,124,0.2)",
           borderRadius: 16, padding: 24,
         }}>
-          <SectionTitle sub={`${inactiveCount} partners have generated zero ARR or have no contract`}>
+          <SectionTitle sub={`${inactiveCount} partners have generated zero MRR or have no contract`}>
             Inactive Partners Requiring Attention
           </SectionTitle>
           {inactivePartnersByCountry.map(([country, partners]) => (
