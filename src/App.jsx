@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid,
 } from "recharts";
 import { fetchAllData } from "./fetchData.js";
@@ -104,6 +104,30 @@ function LoadingScreen() {
   );
 }
 
+function MonthSelect({ value, onChange, label }) {
+  const selectStyle = {
+    padding: "6px 12px",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.15)",
+    background: "rgba(255,255,255,0.05)",
+    color: "#F0F2F5",
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: "pointer",
+    outline: "none",
+  };
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span style={{ fontSize: 12, color: "#6B7585" }}>{label}</span>
+      <select value={value} onChange={(e) => onChange(Number(e.target.value))} style={selectStyle}>
+        {MONTHS.map((m, i) => (
+          <option key={i} value={i} style={{ background: "#1E2433" }}>{m}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export default function App() {
   const [PERF, setPERF] = useState(null);
   const [PARTNERS, setPARTNERS] = useState(null);
@@ -114,6 +138,8 @@ export default function App() {
   const [selectedChannel, setSelectedChannel] = useState("all");
   const [partnerSort, setPartnerSort] = useState("mrr2026");
   const [showInactive, setShowInactive] = useState(false);
+  const [periodFrom, setPeriodFrom] = useState(0);
+  const [periodTo, setPeriodTo] = useState(FALLBACK_MONTH);
 
   useEffect(() => {
     fetchAllData()
@@ -121,6 +147,7 @@ export default function App() {
         setPERF(perf);
         setPARTNERS(partners);
         setCurrentMonthIdx(perf.currentMonthIdx);
+        setPeriodTo(perf.currentMonthIdx);
         setDataSource("live");
         setLastUpdated(new Date());
       })
@@ -149,10 +176,10 @@ export default function App() {
   const filteredPartners = useMemo(() => {
     let list = allPartners;
     if (selectedChannel !== "all") list = list.filter(p => p.channel === selectedChannel);
-    if (!showInactive) list = list.filter(p => p.adv > 0 || p.adv2026 > 0);
+    if (!showInactive) list = list.filter(p => p.arr > 0 || p.arr2026 > 0);
     list = [...list].sort((a, b) => {
-      if (partnerSort === "mrr2026") return b.ytdMRR - a.ytdMRR || b.adv - a.adv;
-      if (partnerSort === "adv") return b.adv - a.adv;
+      if (partnerSort === "mrr2026") return b.ytdMRR - a.ytdMRR || b.arr - a.arr;
+      if (partnerSort === "arr") return b.arr - a.arr;
       if (partnerSort === "mrrAvg") return b.mrrAvg - a.mrrAvg;
       if (partnerSort === "name") return a.name.localeCompare(b.name);
       return 0;
@@ -160,13 +187,28 @@ export default function App() {
     return list;
   }, [allPartners, selectedChannel, showInactive, partnerSort]);
 
+  const inactivePartnersByCountry = useMemo(() => {
+    const inactive = allPartners.filter(p => p.arr === 0 && p.arr2026 === 0);
+    const grouped = {};
+    inactive.forEach(p => {
+      const country = p.country || "Unknown";
+      if (!grouped[country]) grouped[country] = [];
+      grouped[country].push(p);
+    });
+    return Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [allPartners]);
+
   if (!PERF || !PARTNERS) return <LoadingScreen />;
 
-  const ytdMRR = PERF.totalClosedMRR.reduce((a, b) => a + b, 0);
-  const ytdTargetMRR = PERF.totalTargetMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0);
-  const ytdADV = PERF.totalClosedADV.reduce((a, b) => a + b, 0);
-  const achievement = ytdTargetMRR > 0 ? ytdMRR / ytdTargetMRR : 0;
-  const variance = ytdMRR - ytdTargetMRR;
+  // Use period range for calculations
+  const fromIdx = Math.min(periodFrom, periodTo);
+  const toIdx = Math.max(periodFrom, periodTo);
+
+  const periodMRR = PERF.totalClosedMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
+  const periodTargetMRR = PERF.totalTargetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
+  const periodARR = PERF.totalClosedARR ? PERF.totalClosedARR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0) : 0;
+  const achievement = periodTargetMRR > 0 ? periodMRR / periodTargetMRR : 0;
+  const variance = periodMRR - periodTargetMRR;
 
   const channelData = MONTHS.map((m, i) => ({
     month: m,
@@ -179,27 +221,27 @@ export default function App() {
   const channelSummary = [
     {
       name: "Referrals",
-      actual: PERF.referrals.closedMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
-      target: PERF.referrals.targetMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
+      actual: PERF.referrals.closedMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
+      target: PERF.referrals.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "30%",
       partners: PARTNERS.referrals.length,
-      active: PARTNERS.referrals.filter(p => p.adv > 0 || p.adv2026 > 0).length,
+      active: PARTNERS.referrals.filter(p => p.arr > 0 || p.arr2026 > 0).length,
     },
     {
       name: "Resellers",
-      actual: PERF.resellers.closedMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
-      target: PERF.resellers.targetMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
+      actual: PERF.resellers.closedMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
+      target: PERF.resellers.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "60%",
       partners: PARTNERS.resellers.length,
-      active: PARTNERS.resellers.filter(p => p.adv > 0 || p.adv2026 > 0).length,
+      active: PARTNERS.resellers.filter(p => p.arr > 0 || p.arr2026 > 0).length,
     },
     {
       name: "Agencies",
-      actual: PERF.agencies.closedMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
-      target: PERF.agencies.targetMRR.slice(0, currentMonthIdx + 1).reduce((a, b) => a + b, 0),
+      actual: PERF.agencies.closedMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
+      target: PERF.agencies.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "10%",
       partners: PARTNERS.agencies.length,
-      active: PARTNERS.agencies.filter(p => p.adv > 0 || p.adv2026 > 0).length,
+      active: PARTNERS.agencies.filter(p => p.arr > 0 || p.arr2026 > 0).length,
     },
   ];
 
@@ -209,7 +251,7 @@ export default function App() {
     return { month: m, "Actual Cumulative": i <= currentMonthIdx ? actual : null, "Target Cumulative": target };
   });
 
-  const inactiveCount = allPartners.filter(p => p.adv === 0 && p.adv2026 === 0).length;
+  const inactiveCount = allPartners.filter(p => p.arr === 0 && p.arr2026 === 0).length;
   const activeCount = allPartners.length - inactiveCount;
 
   const btnStyle = (active) => ({
@@ -219,6 +261,12 @@ export default function App() {
     color: active ? "#7CB5E8" : "#8B95A5",
     fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s",
   });
+
+  const periodLabel = fromIdx === 0 && toIdx === currentMonthIdx
+    ? "YTD"
+    : fromIdx === toIdx
+    ? MONTHS[fromIdx]
+    : `${MONTHS[fromIdx]}-${MONTHS[toIdx]}`;
 
   return (
     <div style={{
@@ -248,18 +296,25 @@ export default function App() {
               </p>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{
-              width: 8, height: 8, borderRadius: "50%",
-              background: dataSource === "live" ? "#4ADE80" : dataSource === "fallback" ? "#FBBF24" : "#6B7585",
-            }} />
-            <span style={{ fontSize: 12, color: "#6B7585" }}>
-              {dataSource === "live" && lastUpdated
-                ? `Live · ${lastUpdated.toLocaleTimeString()}`
-                : dataSource === "fallback"
-                ? "Offline mode (cached data)"
-                : "Loading..."}
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <MonthSelect value={periodFrom} onChange={setPeriodFrom} label="From" />
+              <MonthSelect value={periodTo} onChange={setPeriodTo} label="To" />
+            </div>
+            <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.1)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: dataSource === "live" ? "#4ADE80" : dataSource === "fallback" ? "#FBBF24" : "#6B7585",
+              }} />
+              <span style={{ fontSize: 12, color: "#6B7585" }}>
+                {dataSource === "live" && lastUpdated
+                  ? `Live · ${lastUpdated.toLocaleTimeString()}`
+                  : dataSource === "fallback"
+                  ? "Offline mode (cached data)"
+                  : "Loading..."}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -268,21 +323,19 @@ export default function App() {
 
         {/* KPI Cards */}
         <div style={{ display: "flex", gap: 16, marginBottom: 40, flexWrap: "wrap" }}>
-          <KPICard label="YTD Partner MRR" value={fmtFull(ytdMRR)}
+          <KPICard label={`${periodLabel} Partner MRR`} value={fmtFull(periodMRR)}
             sub={`${variance >= 0 ? "+" : ""}${fmtFull(variance)} vs target`}
             accent="#7CB5E8" status={variance >= 0 ? "positive" : "negative"} />
           <KPICard label="Target Achievement" value={pct(achievement)}
-            sub={`Target: ${fmtFull(ytdTargetMRR)}`}
             accent={achievement >= 1 ? "#4ADE80" : "#F87171"}
             status={achievement >= 1 ? "positive" : "negative"} />
-          <KPICard label="YTD ADV Closed" value={fmtFull(ytdADV)} accent="#A8D5A2" />
+          <KPICard label={`${periodLabel} ARR Closed`} value={fmtFull(periodARR)} accent="#A8D5A2" />
           <KPICard label="Active Partners" value={`${activeCount} / ${allPartners.length}`}
-            sub={`${inactiveCount} partners with zero output`}
-            accent="#E8927C" status={inactiveCount > 10 ? "negative" : "neutral"} />
+            accent="#E8927C" />
         </div>
 
         {/* Channel Cards */}
-        <SectionTitle sub="Actual vs. target by partner channel — YTD">Channel Performance</SectionTitle>
+        <SectionTitle sub={`Actual vs. target by partner channel — ${periodLabel}`}>Channel Performance</SectionTitle>
         <div style={{ display: "flex", gap: 16, marginBottom: 40, flexWrap: "wrap" }}>
           {channelSummary.map(ch => {
             const ratio = ch.target > 0 ? ch.actual / ch.target : 0;
@@ -334,7 +387,7 @@ export default function App() {
           }}>
             <SectionTitle sub="Monthly closed MRR by channel vs. total target">Monthly Performance</SectionTitle>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={channelData} barGap={2}>
+              <ComposedChart data={channelData} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                 <XAxis dataKey="month" tick={{ fill: "#6B7585", fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#6B7585", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
@@ -343,7 +396,7 @@ export default function App() {
                 <Bar dataKey="Resellers Actual" stackId="a" fill={CHANNEL_COLORS.Resellers} />
                 <Bar dataKey="Agencies Actual" stackId="a" fill={CHANNEL_COLORS.Agencies} radius={[4,4,0,0]} />
                 <Line type="monotone" dataKey="Target" stroke="#F0F2F5" strokeWidth={2} strokeDasharray="6 4" dot={false} />
-              </BarChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
           <div style={{
@@ -391,7 +444,7 @@ export default function App() {
                     { key: "name", label: "Partner" },
                     { key: null, label: "Channel" },
                     { key: null, label: "Country" },
-                    { key: "adv", label: "Historical ADV" },
+                    { key: "arr", label: "ARR Closed Until 2025" },
                     { key: "mrrAvg", label: "Avg Monthly MRR" },
                     { key: "mrr2026", label: "2026 YTD MRR" },
                     { key: null, label: MONTHS[currentMonthIdx] },
@@ -420,7 +473,7 @@ export default function App() {
                     <td style={{ padding: "12px 14px" }}><ChannelBadge channel={p.channel} /></td>
                     <td style={{ padding: "12px 14px", color: "#8B95A5" }}>{p.country}</td>
                     <td style={{ padding: "12px 14px", textAlign: "right", fontFamily: "monospace", fontSize: 13 }}>
-                      {p.adv > 0 ? fmtFull(p.adv) : <span style={{ color: "#334155" }}>—</span>}
+                      {p.arr > 0 ? fmtFull(p.arr) : <span style={{ color: "#334155" }}>—</span>}
                     </td>
                     <td style={{ padding: "12px 14px", textAlign: "right", fontFamily: "monospace", fontSize: 13 }}>
                       {p.mrrAvg > 0 ? fmtFull(Math.round(p.mrrAvg)) : <span style={{ color: "#334155" }}>—</span>}
@@ -458,19 +511,26 @@ export default function App() {
           background: "rgba(232,146,124,0.08)", border: "1px solid rgba(232,146,124,0.2)",
           borderRadius: 16, padding: 24,
         }}>
-          <SectionTitle sub={`${inactiveCount} partners have generated zero ADV historically and zero in 2026`}>
-            ⚠ Inactive Partners Requiring Attention
+          <SectionTitle sub={`${inactiveCount} partners have generated zero ARR historically and zero in 2026`}>
+            Inactive Partners Requiring Attention
           </SectionTitle>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {allPartners.filter(p => p.adv === 0 && p.adv2026 === 0).map((p, i) => (
-              <span key={i} style={{
-                padding: "5px 12px", borderRadius: 8, fontSize: 12,
-                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#8B95A5",
-              }}>
-                {p.name} <span style={{ color: "#555", marginLeft: 4 }}>{p.country}</span>
-              </span>
-            ))}
-          </div>
+          {inactivePartnersByCountry.map(([country, partners]) => (
+            <div key={country} style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#8B95A5", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                {country}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {partners.map((p, i) => (
+                  <span key={i} style={{
+                    padding: "4px 10px", borderRadius: 6, fontSize: 12,
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#8B95A5",
+                  }}>
+                    {p.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
           <p style={{ fontSize: 13, color: "#8B95A5", marginTop: 16, lineHeight: 1.6 }}>
             Consider scheduling check-ins with these partners to assess engagement, or archive those with no pipeline potential.
           </p>

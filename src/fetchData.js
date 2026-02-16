@@ -73,7 +73,9 @@ function parseCSVRow(row) {
 
 function num(val) {
   if (!val || val === "" || val === "-") return 0;
-  const n = parseFloat(val.replace(/,/g, ""));
+  // Remove quotes, commas, currency symbols, and whitespace
+  const cleaned = val.replace(/["'€$£,\s]/g, "");
+  const n = parseFloat(cleaned);
   return isNaN(n) ? 0 : n;
 }
 
@@ -87,7 +89,6 @@ function getMonthlyValues(row) {
 }
 
 function detectCurrentMonth(mrrRow) {
-  // Find the last month that has actual data (non-zero)
   const values = getMonthlyValues(mrrRow);
   let lastIdx = -1;
   for (let i = 0; i < 12; i++) {
@@ -97,7 +98,7 @@ function detectCurrentMonth(mrrRow) {
 }
 
 function parsePerformance(rows) {
-  const totalClosedADV = getMonthlyValues(findRow(rows, "Total Closed ARR"));
+  const totalClosedARR = getMonthlyValues(findRow(rows, "Total Closed ARR"));
   const totalClosedMRR = getMonthlyValues(findRow(rows, "Total Closed MRR"));
   const totalTargetMRR = getMonthlyValues(findRow(rows, "Total Target MRR"));
   const companyGrowthMRR = getMonthlyValues(findRow(rows, "Company Growth Target MRR"));
@@ -106,21 +107,21 @@ function parsePerformance(rows) {
   // Referrals
   const refSection = rows.findIndex((r) => r[1] && r[1].trim() === "Referrals Performance");
   const refRows = refSection >= 0 ? rows.slice(refSection) : [];
-  const refClosedADV = getMonthlyValues(findRow(refRows, "Deals Closed ARR"));
+  const refClosedARR = getMonthlyValues(findRow(refRows, "Deals Closed ARR"));
   const refClosedMRR = getMonthlyValues(findRow(refRows, "Deals Closed MRR"));
   const refTarget = getMonthlyValues(findRow(refRows, "Monthly Target"));
 
   // Resellers
   const resSection = rows.findIndex((r) => r[1] && r[1].trim() === "Resellers Performance");
   const resRows = resSection >= 0 ? rows.slice(resSection) : [];
-  const resClosedADV = getMonthlyValues(findRow(resRows, "Deals Closed ARR"));
+  const resClosedARR = getMonthlyValues(findRow(resRows, "Deals Closed ARR"));
   const resClosedMRR = getMonthlyValues(findRow(resRows, "Deals Closed MRR"));
   const resTarget = getMonthlyValues(findRow(resRows, "Monthly Target"));
 
   // Agencies
   const agSection = rows.findIndex((r) => r[1] && r[1].trim() === "Agencies Performance");
   const agRows = agSection >= 0 ? rows.slice(agSection) : [];
-  const agClosedADV = getMonthlyValues(findRow(agRows, "Deals Closed ARR"));
+  const agClosedARR = getMonthlyValues(findRow(agRows, "Deals Closed ARR"));
   const agClosedMRR = getMonthlyValues(findRow(agRows, "Deals Closed MRR"));
   const agTarget = getMonthlyValues(findRow(agRows, "Monthly Target"));
 
@@ -128,35 +129,23 @@ function parsePerformance(rows) {
 
   return {
     currentMonthIdx,
-    totalClosedADV,
+    totalClosedARR,
     totalClosedMRR,
     totalTargetMRR,
     companyGrowthMRR,
     companyGrowthPct,
-    referrals: { closedADV: refClosedADV, closedMRR: refClosedMRR, targetMRR: refTarget },
-    resellers: { closedADV: resClosedADV, closedMRR: resClosedMRR, targetMRR: resTarget },
-    agencies: { closedADV: agClosedADV, closedMRR: agClosedMRR, targetMRR: agTarget },
+    referrals: { closedARR: refClosedARR, closedMRR: refClosedMRR, targetMRR: refTarget },
+    resellers: { closedARR: resClosedARR, closedMRR: resClosedMRR, targetMRR: resTarget },
+    agencies: { closedARR: agClosedARR, closedMRR: agClosedMRR, targetMRR: agTarget },
   };
 }
 
 function parsePartnerSheet(rows, nameLabel) {
-  console.log(`=== parsePartnerSheet for ${nameLabel} ===`);
-  console.log("Looking for header with label:", nameLabel);
-  console.log("All row[1] values:", rows.map(r => r[1]).slice(0, 15));
-
-  // Find the header row (contains "Based In" and month columns)
   const headerIdx = rows.findIndex((r) => r[1] && r[1].trim() === nameLabel);
-  console.log("headerIdx found:", headerIdx);
+  if (headerIdx < 0) return [];
 
-  if (headerIdx < 0) {
-    console.warn(`Could not find header row with label "${nameLabel}"`);
-    return [];
-  }
-
-  // Find the "No Agreement" section to know where active partners end
   const noAgreementIdx = rows.findIndex((r, i) => i > headerIdx && r[1] && r[1].trim() === "No Agreement");
   const endIdx = noAgreementIdx > 0 ? noAgreementIdx : rows.length;
-  console.log("Parsing partners from row", headerIdx + 1, "to", endIdx);
 
   const partners = [];
   for (let i = headerIdx + 1; i < endIdx; i++) {
@@ -166,37 +155,23 @@ function parsePartnerSheet(rows, nameLabel) {
 
     const country = r[2] ? r[2].trim() : "";
     const commission = r[4] ? r[4].trim() : "";
-    const closedADVUntil2025 = num(r[8]);
+    const closedARRUntil2025 = num(r[8]);
     const mrrAvg = num(r[10]);
 
-    // Monthly ADV values are in columns 11-22 (index 11 to 22)
-    const mrr2026 = Array.from({ length: 12 }, (_, m) => {
-      const val = num(r[m + 11]);
-      return val;
-    });
+    const mrr2026 = Array.from({ length: 12 }, (_, m) => num(r[m + 11]));
+    const arr2026 = mrr2026.reduce((a, b) => a + b, 0) * 12;
 
-    const adv2026 = mrr2026.reduce((a, b) => a + b, 0) * 12; // rough estimate
-
-    const partner = {
+    partners.push({
       name,
       country,
-      adv: closedADVUntil2025,
+      arr: closedARRUntil2025,
       mrrAvg,
-      adv2026: mrr2026.reduce((a, b) => a + b, 0) > 0 ? 1 : 0, // flag for activity
+      arr2026: mrr2026.reduce((a, b) => a + b, 0) > 0 ? 1 : 0,
       mrr2026,
       commission: commission.length > 40 ? commission.substring(0, 40) + "..." : commission,
       start: r[6] ? r[6].trim().substring(0, 7) : "-",
-    };
-
-    if (partners.length < 3) {
-      console.log(`Sample partner ${partners.length + 1}:`, partner);
-      console.log(`Raw row data:`, r.slice(0, 15));
-    }
-
-    partners.push(partner);
+    });
   }
-
-  console.log(`Total ${nameLabel} partners parsed:`, partners.length);
   return partners;
 }
 
@@ -208,36 +183,18 @@ export async function fetchAllData() {
     fetch(SHEET_URLS.agencies).then((r) => r.text()),
   ]);
 
-  console.log("=== RAW CSV TEXT ===");
-  console.log("Performance (first 500 chars):", perfText.substring(0, 500));
-  console.log("Referrals (first 500 chars):", refText.substring(0, 500));
-
   const perfRows = parseCSV(perfText);
   const refRows = parseCSV(refText);
   const resRows = parseCSV(resText);
   const agRows = parseCSV(agText);
 
-  console.log("=== PARSED ROWS ===");
-  console.log("Performance rows (first 10):", perfRows.slice(0, 10));
-  console.log("Referrals rows (first 10):", refRows.slice(0, 10));
-  console.log("Resellers rows (first 5):", resRows.slice(0, 5));
-  console.log("Agencies rows (first 5):", agRows.slice(0, 5));
-
   const perf = parsePerformance(perfRows);
-
-  console.log("=== PARSED PERF ===");
-  console.log("perf:", perf);
 
   const partners = {
     referrals: parsePartnerSheet(refRows, "Referral"),
     resellers: parsePartnerSheet(resRows, "Reseller"),
     agencies: parsePartnerSheet(agRows, "Agency"),
   };
-
-  console.log("=== PARSED PARTNERS ===");
-  console.log("referrals:", partners.referrals);
-  console.log("resellers:", partners.resellers);
-  console.log("agencies:", partners.agencies);
 
   return { perf, partners };
 }
