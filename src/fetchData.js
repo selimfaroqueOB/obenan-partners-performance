@@ -164,6 +164,11 @@ function parsePartnerSheet(rows, nameLabel) {
   const headerIdx = rows.findIndex((r) => r[1] && r[1].trim().includes(nameLabel));
   if (headerIdx < 0) return [];
 
+  // Debug: show header row and first data row
+  console.log(`=== parsePartnerSheet("${nameLabel}") ===`);
+  console.log(`headerIdx=${headerIdx}, row:`, rows[headerIdx]);
+  console.log(`headerIdx+1=${headerIdx + 1}, row:`, rows[headerIdx + 1]);
+
   // Find "No Agreement" row to determine contract status
   const noAgreementIdx = rows.findIndex((r, i) => i > headerIdx && r[1] && r[1].trim().includes("No Agreement"));
 
@@ -171,11 +176,17 @@ function parsePartnerSheet(rows, nameLabel) {
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i];
     const name = r[1] ? r[1].trim() : "";
-
-    // Skip empty rows and the "No Agreement" header row itself
-    if (!name || name === "" || name.includes("No Agreement")) continue;
-
     const country = r[2] ? r[2].trim() : "";
+
+    // Skip empty rows, header rows, and special rows
+    if (!name || name === "") continue;
+    if (name.includes("No Agreement")) continue;
+    // Skip the header row itself (e.g. "Referral", "Reseller", "Agency")
+    if (name === "Referral" || name === "Reseller" || name === "Agency") continue;
+    // Skip if country is "Based In" (header row)
+    if (country === "Based In") continue;
+    // Skip TOTAL rows (column 7 contains "TOTAL")
+    if (r[7] && r[7].trim() === "TOTAL") continue;
     const contactPerson = r[3] ? r[3].trim() : "";
     const commissionRaw = r[4] ? r[4].trim() : "";
     const startDate = r[6] ? r[6].trim().substring(0, 7) : "-";
