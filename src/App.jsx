@@ -384,14 +384,14 @@ export default function App() {
         {/* Pie Charts Row */}
         {(() => {
           const allocationData = [
-            { name: "Referrals", value: 30, color: CHANNEL_COLORS.Referrals },
-            { name: "Resellers", value: 60, color: CHANNEL_COLORS.Resellers },
-            { name: "Agencies", value: 10, color: CHANNEL_COLORS.Agencies },
+            { name: "Referrals", value: (PERF.refTargetPct || 0.3) * 100, color: CHANNEL_COLORS.Referrals },
+            { name: "Resellers", value: (PERF.resTargetPct || 0.6) * 100, color: CHANNEL_COLORS.Resellers },
+            { name: "Agencies", value: (PERF.agTargetPct || 0.1) * 100, color: CHANNEL_COLORS.Agencies },
           ];
           const annualTargetData = [
-            { name: "Referrals", value: PERF.referrals.targetMRR.reduce((a, b) => a + b, 0), color: CHANNEL_COLORS.Referrals },
-            { name: "Resellers", value: PERF.resellers.targetMRR.reduce((a, b) => a + b, 0), color: CHANNEL_COLORS.Resellers },
-            { name: "Agencies", value: PERF.agencies.targetMRR.reduce((a, b) => a + b, 0), color: CHANNEL_COLORS.Agencies },
+            { name: "Referrals", value: PERF.refTargetAnnual || 0, color: CHANNEL_COLORS.Referrals },
+            { name: "Resellers", value: PERF.resTargetAnnual || 0, color: CHANNEL_COLORS.Resellers },
+            { name: "Agencies", value: PERF.agTargetAnnual || 0, color: CHANNEL_COLORS.Agencies },
           ];
           const totalAnnualTarget = annualTargetData.reduce((a, b) => a + b.value, 0);
           const partnerDistData = [

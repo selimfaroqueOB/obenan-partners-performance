@@ -127,6 +127,21 @@ function parsePerformance(rows) {
 
   const currentMonthIdx = detectCurrentMonth(findRow(rows, "Total Closed MRR"));
 
+  // Get target percentages and annual values from column 14 (Total/Average)
+  const refTargetPctRow = findRow(refRows, "Referrals Growth Target %");
+  const resTargetPctRow = findRow(resRows, "Resellers Growth Target %");
+  const agTargetPctRow = findRow(agRows, "Agencies Growth Target %");
+  const refTargetAnnualRow = findRow(refRows, "Referrals Growth Target MRR");
+  const resTargetAnnualRow = findRow(resRows, "Resellers Growth Target MRR");
+  const agTargetAnnualRow = findRow(agRows, "Agencies Growth Target MRR");
+
+  const refTargetPct = refTargetPctRow ? num(refTargetPctRow[14]) : 0.3;
+  const resTargetPct = resTargetPctRow ? num(resTargetPctRow[14]) : 0.6;
+  const agTargetPct = agTargetPctRow ? num(agTargetPctRow[14]) : 0.1;
+  const refTargetAnnual = refTargetAnnualRow ? num(refTargetAnnualRow[14]) : 0;
+  const resTargetAnnual = resTargetAnnualRow ? num(resTargetAnnualRow[14]) : 0;
+  const agTargetAnnual = agTargetAnnualRow ? num(agTargetAnnualRow[14]) : 0;
+
   return {
     currentMonthIdx,
     totalClosedARR,
@@ -137,6 +152,12 @@ function parsePerformance(rows) {
     referrals: { closedARR: refClosedARR, closedMRR: refClosedMRR, targetMRR: refTarget },
     resellers: { closedARR: resClosedARR, closedMRR: resClosedMRR, targetMRR: resTarget },
     agencies: { closedARR: agClosedARR, closedMRR: agClosedMRR, targetMRR: agTarget },
+    refTargetPct,
+    resTargetPct,
+    agTargetPct,
+    refTargetAnnual,
+    resTargetAnnual,
+    agTargetAnnual,
   };
 }
 
