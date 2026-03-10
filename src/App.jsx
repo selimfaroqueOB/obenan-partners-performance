@@ -209,15 +209,17 @@ export default function App() {
   const periodMRR = PERF.totalClosedMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
   const periodTargetMRR = PERF.resellers.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0) + PERF.agencies.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
   const periodARR = PERF.totalClosedARR ? PERF.totalClosedARR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0) : 0;
+  const periodTargetARR = periodTargetMRR * 12;
+  const arrVariance = periodARR - periodTargetARR;
   const achievement = periodTargetMRR > 0 ? periodMRR / periodTargetMRR : 0;
+  const achievementDelta = (achievement - 1) * 100;
   const variance = periodMRR - periodTargetMRR;
 
   const channelData = MONTHS.map((m, i) => ({
     month: m,
-    "Referrals Actual": PERF.referrals.closedMRR[i],
     "Resellers Actual": PERF.resellers.closedMRR[i],
     "Agencies Actual": PERF.agencies.closedMRR[i],
-    "Target": PERF.totalTargetMRR[i],
+    "Target": PERF.resellers.targetMRR[i] + PERF.agencies.targetMRR[i],
   }));
 
   const channelSummary = [
@@ -328,10 +330,13 @@ export default function App() {
           <KPICard label={`${periodLabel} Partner MRR`} value={fmtFull(periodMRR)}
             sub={`${variance >= 0 ? "+" : ""}${fmtFull(variance)} vs target`}
             accent="#7CB5E8" status={variance >= 0 ? "positive" : "negative"} />
-          <KPICard label="Target Achievement" value={pct(achievement)}
+          <KPICard label="Target Achievement" value={`${Math.abs(achievementDelta).toFixed(1)}%`}
+            sub={achievement >= 1 ? "above target" : "below target"}
             accent={achievement >= 1 ? "#4ADE80" : "#F87171"}
             status={achievement >= 1 ? "positive" : "negative"} />
-          <KPICard label={`${periodLabel} ARR Closed`} value={fmtFull(periodARR)} accent="#A8D5A2" />
+          <KPICard label={`${periodLabel} ARR Closed`} value={fmtFull(periodARR)}
+            sub={`${arrVariance >= 0 ? "+" : ""}${fmtFull(arrVariance)} vs target`}
+            accent="#A8D5A2" status={arrVariance >= 0 ? "positive" : "negative"} />
           <KPICard label="Active Partners" value={`${activeCount} / ${allPartners.length}`}
             accent="#E8927C" />
         </div>
@@ -388,12 +393,9 @@ export default function App() {
 
         {/* Pie Charts Row */}
         {(() => {
-          const resPct = PERF.resTargetPct || 0.6;
-          const agPct = PERF.agTargetPct || 0.1;
-          const totalPct = resPct + agPct;
           const allocationData = [
-            { name: "Resellers", value: Math.round((resPct / totalPct) * 100), color: CHANNEL_COLORS.Resellers },
-            { name: "Agencies", value: Math.round((agPct / totalPct) * 100), color: CHANNEL_COLORS.Agencies },
+            { name: "Resellers", value: Math.round((PERF.resTargetPct || 0.9) * 100), color: CHANNEL_COLORS.Resellers },
+            { name: "Agencies", value: Math.round((PERF.agTargetPct || 0.1) * 100), color: CHANNEL_COLORS.Agencies },
           ];
           const annualTargetData = [
             { name: "Resellers", value: PERF.resTargetAnnual || 0, color: CHANNEL_COLORS.Resellers },
@@ -566,7 +568,6 @@ export default function App() {
                   formatter={(value) => <span style={{ color: "#8B95A5", fontSize: 12 }}>{value.replace(" Actual", "")}</span>}
                 />
                 <Bar dataKey="Target" fill="#4A5568" name="Target" radius={[4,4,0,0]} />
-                <Bar dataKey="Referrals Actual" stackId="a" fill={CHANNEL_COLORS.Referrals} name="Referrals Actual" />
                 <Bar dataKey="Resellers Actual" stackId="a" fill={CHANNEL_COLORS.Resellers} name="Resellers Actual" />
                 <Bar dataKey="Agencies Actual" stackId="a" fill={CHANNEL_COLORS.Agencies} radius={[4,4,0,0]} name="Agencies Actual" />
               </ComposedChart>
