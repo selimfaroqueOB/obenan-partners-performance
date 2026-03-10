@@ -147,47 +147,24 @@ function parsePerformance(rows) {
   const agTargetPctRaw = agPctRow ? num(agPctRow[14]) : 0.1;
   const agTargetAnnual = agAnnualRow ? num(agAnnualRow[14]) : 0;
 
-  // Debug: log parsed target values
-  console.log("=== Target Allocation Debug ===");
-  console.log("refPctRow label:", refPctRow?.[1], "col14 raw:", refPctRow?.[14], "parsed:", refTargetPctRaw);
-  console.log("resPctRow label:", resPctRow?.[1], "col14 raw:", resPctRow?.[14], "parsed:", resTargetPctRaw);
-  console.log("agPctRow label:", agPctRow?.[1], "col14 raw:", agPctRow?.[14], "parsed:", agTargetPctRaw);
-  console.log("refAnnualRow label:", refAnnualRow?.[1], "col14 raw:", refAnnualRow?.[14], "parsed:", refTargetAnnual);
-  console.log("resAnnualRow label:", resAnnualRow?.[1], "col14 raw:", resAnnualRow?.[14], "parsed:", resTargetAnnual);
-  console.log("agAnnualRow label:", agAnnualRow?.[1], "col14 raw:", agAnnualRow?.[14], "parsed:", agTargetAnnual);
-
   // Normalize percentages excluding Referrals: Resellers/(Resellers+Agencies), Agencies/(Resellers+Agencies)
   const resAgTotal = resTargetPctRaw + agTargetPctRaw;
   const resTargetPct = resAgTotal > 0 ? resTargetPctRaw / resAgTotal : 0.86;
   const agTargetPct = resAgTotal > 0 ? agTargetPctRaw / resAgTotal : 0.14;
 
-  console.log("Normalized (excl referrals): resTargetPct:", resTargetPct, "agTargetPct:", agTargetPct);
-
   // Total Churn
   const totalChurnSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Total Churn"));
-  const totalChurnRows = totalChurnSection >= 0 ? rows.slice(totalChurnSection) : [];
-  const totalChurnRow1 = totalChurnRows[1]; // first data row after header
-  const totalChurnRow2 = totalChurnRows[2]; // second data row after header
-  const totalChurnedARR = getMonthlyValues(totalChurnRow1);
-  const totalChurnedMRR = getMonthlyValues(totalChurnRow2);
+  const totalChurnSlice = totalChurnSection >= 0 ? rows.slice(totalChurnSection) : [];
+  const totalChurnedARR = getMonthlyValues(findRow(totalChurnSlice, "Churned ARR"));
+  const totalChurnedMRR = getMonthlyValues(findRow(totalChurnSlice, "Churned MRR"));
 
-  console.log("=== Total Churn Debug ===");
-  console.log("totalChurnSection index:", totalChurnSection);
-  console.log("churn row1 label:", totalChurnRow1?.[1], "values:", totalChurnedARR);
-  console.log("churn row2 label:", totalChurnRow2?.[1], "values:", totalChurnedMRR);
+  // Total Net Growth
+  const totalGrowthSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Total Net Growth"));
+  const totalGrowthSlice = totalGrowthSection >= 0 ? rows.slice(totalGrowthSection) : [];
+  const totalGrowthARR = getMonthlyValues(findRow(totalGrowthSlice, "Growth ARR"));
+  const totalGrowthMRR = getMonthlyValues(findRow(totalGrowthSlice, "Growth MRR"));
 
-  // Total Growth
-  const totalGrowthSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Total Growth"));
-  const totalGrowthRows = totalGrowthSection >= 0 ? rows.slice(totalGrowthSection) : [];
-  const totalGrowthRow1 = totalGrowthRows[1]; // first data row after header
-  const totalGrowthRow2 = totalGrowthRows[2]; // second data row after header
-  const totalGrowthARR = getMonthlyValues(totalGrowthRow1);
-  const totalGrowthMRR = getMonthlyValues(totalGrowthRow2);
-
-  console.log("=== Total Growth Debug ===");
-  console.log("totalGrowthSection index:", totalGrowthSection);
-  console.log("growth row1 label:", totalGrowthRow1?.[1], "values:", totalGrowthARR);
-  console.log("growth row2 label:", totalGrowthRow2?.[1], "values:", totalGrowthMRR);
+  console.log("totalGrowth.growthMRR:", totalGrowthMRR);
 
   return {
     currentMonthIdx,
@@ -213,11 +190,6 @@ function parsePerformance(rows) {
 function parsePartnerSheet(rows, nameLabel) {
   const headerIdx = rows.findIndex((r) => r[1] && r[1].trim().includes(nameLabel));
   if (headerIdx < 0) return [];
-
-  // Debug: show header row and first data row
-  console.log(`=== parsePartnerSheet("${nameLabel}") ===`);
-  console.log(`headerIdx=${headerIdx}, row:`, rows[headerIdx]);
-  console.log(`headerIdx+1=${headerIdx + 1}, row:`, rows[headerIdx + 1]);
 
   // Find "No Agreement" row to determine contract status
   const noAgreementIdx = rows.findIndex((r, i) => i > headerIdx && r[1] && r[1].trim().includes("No Agreement"));
