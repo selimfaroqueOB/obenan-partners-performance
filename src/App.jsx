@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid, Legend, PieChart, Pie, Cell,
+  LineChart, Line, CartesianGrid, Legend, PieChart, Pie, Cell, LabelList,
 } from "recharts";
 import { fetchAllData } from "./fetchData.js";
 import {
@@ -356,7 +356,7 @@ export default function App() {
         </div>
 
         {/* Channel Cards */}
-        <SectionTitle sub={`Actual vs. target by partner channel — ${periodLabel}`}>Channel Performance</SectionTitle>
+        <SectionTitle sub={`Actual vs. target MRR by partner channel — ${periodLabel}`}>Channel Performance</SectionTitle>
         <div style={{ display: "flex", gap: 16, marginBottom: 40, flexWrap: "wrap" }}>
           {channelSummary.map(ch => {
             const isLeadGen = ch.name === "Lead Generators";
@@ -628,9 +628,15 @@ export default function App() {
                 wrapperStyle={{ paddingTop: 16 }}
                 formatter={(value) => <span style={{ color: "#8B95A5", fontSize: 12 }}>{value}</span>}
               />
-              <Bar dataKey="MRR Churn" fill="#F87171" name="MRR Churn" radius={[4,4,0,0]} />
-              <Bar dataKey="MRR Growth" fill="#4ADE80" name="MRR Growth" radius={[4,4,0,0]} />
-              <Line type="monotone" dataKey="Net Growth" stroke="#7CB5E8" strokeWidth={2.5} dot={{ fill: "#7CB5E8", r: 4 }} name="Net Growth" />
+              <Bar dataKey="MRR Churn" fill="#F87171" name="MRR Churn" radius={[4,4,0,0]}>
+                <LabelList dataKey="MRR Churn" position="top" formatter={(v) => v ? fmt(v) : ""} style={{ fontSize: 10, fill: "rgba(255,255,255,0.5)" }} />
+              </Bar>
+              <Bar dataKey="MRR Growth" fill="#4ADE80" name="MRR Growth" radius={[4,4,0,0]}>
+                <LabelList dataKey="MRR Growth" position="top" formatter={(v) => v ? fmt(v) : ""} style={{ fontSize: 10, fill: "rgba(255,255,255,0.5)" }} />
+              </Bar>
+              <Line type="monotone" dataKey="Net Growth" stroke="#7CB5E8" strokeWidth={2.5} dot={{ fill: "#7CB5E8", r: 4 }} name="Net Growth">
+                <LabelList dataKey="Net Growth" position="top" formatter={(v) => v ? fmt(v) : ""} style={{ fontSize: 10, fill: "rgba(255,255,255,0.5)" }} />
+              </Line>
             </ComposedChart>
           </ResponsiveContainer>
         </div>
