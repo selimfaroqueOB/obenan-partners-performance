@@ -259,14 +259,12 @@ export default function App() {
   const churnMRRMonthly = PERF.totalChurn?.churnedMRR || zeros;
   const growthMRRMonthly = PERF.totalGrowth?.growthMRR || zeros;
   const periodChurnMRR = churnMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
-  const periodGrowthMRR = growthMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
-  const periodNetGrowthMRR = periodGrowthMRR - periodChurnMRR;
+  const periodNetGrowthMRR = growthMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
 
   const churnGrowthData = MONTHS.map((m, i) => ({
     month: m,
-    "Growth MRR": growthMRRMonthly[i],
     "Churn MRR": churnMRRMonthly[i],
-    "Net MRR": growthMRRMonthly[i] - churnMRRMonthly[i],
+    "Net MRR": growthMRRMonthly[i],
   }));
 
   const inactiveCount = allPartners.filter(p => p.arr === 0 && p.ytdMRR === 0).length;
@@ -628,9 +626,8 @@ export default function App() {
                 wrapperStyle={{ paddingTop: 16 }}
                 formatter={(value) => <span style={{ color: "#8B95A5", fontSize: 12 }}>{value}</span>}
               />
-              <Bar dataKey="Growth MRR" fill="#4ADE80" name="Growth MRR" radius={[4,4,0,0]} />
               <Bar dataKey="Churn MRR" fill="#F87171" name="Churn MRR" radius={[4,4,0,0]} />
-              <Line type="monotone" dataKey="Net MRR" stroke="#7CB5E8" strokeWidth={2.5} dot={{ fill: "#7CB5E8", r: 4 }} name="Net MRR" />
+              <Bar dataKey="Net MRR" fill="#4ADE80" name="Net MRR" radius={[4,4,0,0]} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
