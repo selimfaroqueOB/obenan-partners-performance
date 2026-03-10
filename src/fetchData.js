@@ -132,38 +132,62 @@ function parsePerformance(rows) {
 
   const currentMonthIdx = detectCurrentMonth(findRow(rows, "Total Closed MRR"));
 
-  // Get target percentages and annual values from column 14 (Total/Average)
-  // Rows are at fixed positions: 19=RefPct, 20=RefMRR, 21=ResPct, 22=ResMRR, 23=AgPct, 24=AgMRR
-  const refTargetPct = rows[19] ? num(rows[19][14]) : 0.3;
-  const refTargetAnnual = rows[20] ? num(rows[20][14]) : 0;
-  const resTargetPct = rows[21] ? num(rows[21][14]) : 0.9;
-  const resTargetAnnual = rows[22] ? num(rows[22][14]) : 0;
-  const agTargetPct = rows[23] ? num(rows[23][14]) : 0.1;
-  const agTargetAnnual = rows[24] ? num(rows[24][14]) : 0;
+  // Get target percentages and annual values by label matching instead of fixed row indices
+  const refPctRow = findRow(rows, "Referrals Growth Target %");
+  const refAnnualRow = findRow(rows, "Referrals Growth Target MRR");
+  const resPctRow = findRow(rows, "Resellers Growth Target %");
+  const resAnnualRow = findRow(rows, "Resellers Growth Target MRR");
+  const agPctRow = findRow(rows, "Agencies Growth Target %");
+  const agAnnualRow = findRow(rows, "Agencies Growth Target MRR");
 
-  // Resellers Churn
-  const resChurnSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Resellers Churn"));
-  const resChurnRows = resChurnSection >= 0 ? rows.slice(resChurnSection) : [];
-  const resChurnedARR = getMonthlyValues(findRow(resChurnRows, "Deals Churned ARR"));
-  const resChurnedMRR = getMonthlyValues(findRow(resChurnRows, "Deals Churned MRR"));
+  const refTargetPctRaw = refPctRow ? num(refPctRow[14]) : 0.3;
+  const refTargetAnnual = refAnnualRow ? num(refAnnualRow[14]) : 0;
+  const resTargetPctRaw = resPctRow ? num(resPctRow[14]) : 0.6;
+  const resTargetAnnual = resAnnualRow ? num(resAnnualRow[14]) : 0;
+  const agTargetPctRaw = agPctRow ? num(agPctRow[14]) : 0.1;
+  const agTargetAnnual = agAnnualRow ? num(agAnnualRow[14]) : 0;
 
-  // Agencies Churn
-  const agChurnSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Agencies Churn"));
-  const agChurnRows = agChurnSection >= 0 ? rows.slice(agChurnSection) : [];
-  const agChurnedARR = getMonthlyValues(findRow(agChurnRows, "Deals Churned ARR"));
-  const agChurnedMRR = getMonthlyValues(findRow(agChurnRows, "Deals Churned MRR"));
+  // Debug: log parsed target values
+  console.log("=== Target Allocation Debug ===");
+  console.log("refPctRow label:", refPctRow?.[1], "col14 raw:", refPctRow?.[14], "parsed:", refTargetPctRaw);
+  console.log("resPctRow label:", resPctRow?.[1], "col14 raw:", resPctRow?.[14], "parsed:", resTargetPctRaw);
+  console.log("agPctRow label:", agPctRow?.[1], "col14 raw:", agPctRow?.[14], "parsed:", agTargetPctRaw);
+  console.log("refAnnualRow label:", refAnnualRow?.[1], "col14 raw:", refAnnualRow?.[14], "parsed:", refTargetAnnual);
+  console.log("resAnnualRow label:", resAnnualRow?.[1], "col14 raw:", resAnnualRow?.[14], "parsed:", resTargetAnnual);
+  console.log("agAnnualRow label:", agAnnualRow?.[1], "col14 raw:", agAnnualRow?.[14], "parsed:", agTargetAnnual);
 
-  // Resellers Growth
-  const resGrowthSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Resellers Growth"));
-  const resGrowthRows = resGrowthSection >= 0 ? rows.slice(resGrowthSection) : [];
-  const resGrowthARR = getMonthlyValues(findRow(resGrowthRows, "Deals Growth ARR"));
-  const resGrowthMRR = getMonthlyValues(findRow(resGrowthRows, "Deals Growth MRR"));
+  // Normalize percentages excluding Referrals: Resellers/(Resellers+Agencies), Agencies/(Resellers+Agencies)
+  const resAgTotal = resTargetPctRaw + agTargetPctRaw;
+  const resTargetPct = resAgTotal > 0 ? resTargetPctRaw / resAgTotal : 0.86;
+  const agTargetPct = resAgTotal > 0 ? agTargetPctRaw / resAgTotal : 0.14;
 
-  // Agencies Growth
-  const agGrowthSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Agencies Growth"));
-  const agGrowthRows = agGrowthSection >= 0 ? rows.slice(agGrowthSection) : [];
-  const agGrowthARR = getMonthlyValues(findRow(agGrowthRows, "Deals Growth ARR"));
-  const agGrowthMRR = getMonthlyValues(findRow(agGrowthRows, "Deals Growth MRR"));
+  console.log("Normalized (excl referrals): resTargetPct:", resTargetPct, "agTargetPct:", agTargetPct);
+
+  // Total Churn
+  const totalChurnSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Total Churn"));
+  const totalChurnRows = totalChurnSection >= 0 ? rows.slice(totalChurnSection) : [];
+  const totalChurnRow1 = totalChurnRows[1]; // first data row after header
+  const totalChurnRow2 = totalChurnRows[2]; // second data row after header
+  const totalChurnedARR = getMonthlyValues(totalChurnRow1);
+  const totalChurnedMRR = getMonthlyValues(totalChurnRow2);
+
+  console.log("=== Total Churn Debug ===");
+  console.log("totalChurnSection index:", totalChurnSection);
+  console.log("churn row1 label:", totalChurnRow1?.[1], "values:", totalChurnedARR);
+  console.log("churn row2 label:", totalChurnRow2?.[1], "values:", totalChurnedMRR);
+
+  // Total Growth
+  const totalGrowthSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Total Growth"));
+  const totalGrowthRows = totalGrowthSection >= 0 ? rows.slice(totalGrowthSection) : [];
+  const totalGrowthRow1 = totalGrowthRows[1]; // first data row after header
+  const totalGrowthRow2 = totalGrowthRows[2]; // second data row after header
+  const totalGrowthARR = getMonthlyValues(totalGrowthRow1);
+  const totalGrowthMRR = getMonthlyValues(totalGrowthRow2);
+
+  console.log("=== Total Growth Debug ===");
+  console.log("totalGrowthSection index:", totalGrowthSection);
+  console.log("growth row1 label:", totalGrowthRow1?.[1], "values:", totalGrowthARR);
+  console.log("growth row2 label:", totalGrowthRow2?.[1], "values:", totalGrowthMRR);
 
   return {
     currentMonthIdx,
@@ -175,11 +199,9 @@ function parsePerformance(rows) {
     referrals: { closedARR: refClosedARR, closedMRR: refClosedMRR, targetMRR: refTarget },
     resellers: { closedARR: resClosedARR, closedMRR: resClosedMRR, targetMRR: resTarget },
     agencies: { closedARR: agClosedARR, closedMRR: agClosedMRR, targetMRR: agTarget },
-    resellersChurn: { churnedARR: resChurnedARR, churnedMRR: resChurnedMRR },
-    agenciesChurn: { churnedARR: agChurnedARR, churnedMRR: agChurnedMRR },
-    resellersGrowth: { growthARR: resGrowthARR, growthMRR: resGrowthMRR },
-    agenciesGrowth: { growthARR: agGrowthARR, growthMRR: agGrowthMRR },
-    refTargetPct,
+    totalChurn: { churnedARR: totalChurnedARR, churnedMRR: totalChurnedMRR },
+    totalGrowth: { growthARR: totalGrowthARR, growthMRR: totalGrowthMRR },
+    refTargetPct: refTargetPctRaw,
     resTargetPct,
     agTargetPct,
     refTargetAnnual,

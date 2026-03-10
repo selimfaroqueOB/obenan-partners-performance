@@ -256,8 +256,8 @@ export default function App() {
   });
 
   const zeros = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-  const churnMRRMonthly = (PERF.resellersChurn?.churnedMRR || zeros).map((v, i) => v + (PERF.agenciesChurn?.churnedMRR || zeros)[i]);
-  const growthMRRMonthly = (PERF.resellersGrowth?.growthMRR || zeros).map((v, i) => v + (PERF.agenciesGrowth?.growthMRR || zeros)[i]);
+  const churnMRRMonthly = PERF.totalChurn?.churnedMRR || zeros;
+  const growthMRRMonthly = PERF.totalGrowth?.growthMRR || zeros;
   const periodChurnMRR = churnMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
   const periodGrowthMRR = growthMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
   const periodNetGrowthMRR = periodGrowthMRR - periodChurnMRR;
