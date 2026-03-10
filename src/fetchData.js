@@ -188,8 +188,27 @@ function parsePerformance(rows) {
 }
 
 function parsePartnerSheet(rows, nameLabel) {
-  const headerIdx = rows.findIndex((r) => r[1] && r[1].trim().includes(nameLabel));
+  // Find the true column header row: contains the label in col 1 AND "2026-1" somewhere
+  let headerIdx = rows.findIndex(
+    (r) =>
+      r[1] && r[1].trim() === nameLabel &&
+      r.some((cell) => cell && cell.trim() === "2026-1")
+  );
+  // Fallback: row where col 1 equals the label and contains "Based In"
+  if (headerIdx < 0) {
+    headerIdx = rows.findIndex(
+      (r) =>
+        r[1] && r[1].trim() === nameLabel &&
+        r.some((cell) => cell && cell.trim() === "Based In")
+    );
+  }
   if (headerIdx < 0) return [];
+
+  const headerRow = rows[headerIdx];
+
+  // Dynamically find where "2026-1" starts in the header row
+  const monthOffset = headerRow.findIndex((cell) => cell && cell.trim() === "2026-1");
+  if (monthOffset < 0) return [];
 
   // Find "No Agreement" row to determine contract status
   const noAgreementIdx = rows.findIndex((r, i) => i > headerIdx && r[1] && r[1].trim().includes("No Agreement"));
@@ -203,19 +222,17 @@ function parsePartnerSheet(rows, nameLabel) {
     // Skip empty rows, header rows, and special rows
     if (!name || name === "") continue;
     if (name.includes("No Agreement")) continue;
-    // Skip the header row itself (e.g. "Referral", "Reseller", "Agency")
     if (name === "Referral" || name === "Reseller" || name === "Agency") continue;
-    // Skip if country is "Based In" (header row)
     if (country === "Based In") continue;
-    // Skip TOTAL rows (column 7 contains "TOTAL")
     if (r[7] && r[7].trim() === "TOTAL") continue;
-    const contactPerson = r[3] ? r[3].trim() : "";
-    const commissionRaw = r[4] ? r[4].trim() : "";
-    const startDate = r[6] ? r[6].trim().substring(0, 7) : "-";
-    const closedARRUntil2025 = num(r[8]);
-    const mrrAvg = num(r[10]);
 
-    const mrr2026 = Array.from({ length: 12 }, (_, m) => num(r[m + 11]));
+    const contactPerson = r[3] ? r[3].trim() : "";
+    const commissionRaw = r[5] ? r[5].trim() : "";
+    const startDate = r[7] ? r[7].trim().substring(0, 7) : "-";
+    const closedARRUntil2025 = num(r[9]);
+    const mrrAvg = num(r[11]);
+
+    const mrr2026 = Array.from({ length: 12 }, (_, m) => num(r[m + monthOffset]));
 
     // Contract status: "V" if before "No Agreement", "X" if after
     const hasContract = noAgreementIdx < 0 || i < noAgreementIdx;
