@@ -265,6 +265,7 @@ export default function App() {
     month: m,
     "Churn MRR": churnMRRMonthly[i],
     "Net MRR": growthMRRMonthly[i],
+    "Net Trend": growthMRRMonthly[i],
   }));
 
   const inactiveCount = allPartners.filter(p => p.arr === 0 && p.ytdMRR === 0).length;
@@ -628,6 +629,7 @@ export default function App() {
               />
               <Bar dataKey="Churn MRR" fill="#F87171" name="Churn MRR" radius={[4,4,0,0]} />
               <Bar dataKey="Net MRR" fill="#4ADE80" name="Net MRR" radius={[4,4,0,0]} />
+              <Line type="monotone" dataKey="Net Trend" stroke="#7CB5E8" strokeWidth={2.5} dot={{ fill: "#7CB5E8", r: 4 }} name="Net Trend" />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
