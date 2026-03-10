@@ -110,7 +110,7 @@ function parsePerformance(rows) {
   const companyGrowthPct = getMonthlyValues(findRow(rows, "Company Growth Target %"));
 
   // Lead Generators
-  const refSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Referrals Performance"));
+  const refSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Lead Generator Performance"));
   const refRows = refSection >= 0 ? rows.slice(refSection) : [];
   const refClosedARR = getMonthlyValues(findRow(refRows, "Deals Closed ARR"));
   const refClosedMRR = getMonthlyValues(findRow(refRows, "Deals Closed MRR"));
@@ -133,8 +133,8 @@ function parsePerformance(rows) {
   const currentMonthIdx = detectCurrentMonth(findRow(rows, "Total Closed MRR"));
 
   // Get target percentages and annual values by label matching instead of fixed row indices
-  const refPctRow = findRow(rows, "Referrals Growth Target %");
-  const refAnnualRow = findRow(rows, "Referrals Growth Target MRR");
+  const refPctRow = findRow(rows, "Lead Generator Growth Target %") || findRow(rows, "Partners Contribution Target %");
+  const refAnnualRow = findRow(rows, "Lead Generator Growth Target MRR") || findRow(rows, "Partners Contribution Target MRR");
   const resPctRow = findRow(rows, "Resellers Growth Target %");
   const resAnnualRow = findRow(rows, "Resellers Growth Target MRR");
   const agPctRow = findRow(rows, "Agencies Growth Target %");
@@ -222,7 +222,7 @@ function parsePartnerSheet(rows, nameLabel) {
     // Skip empty rows, header rows, and special rows
     if (!name || name === "") continue;
     if (name.includes("No Agreement")) continue;
-    if (name === "Referral" || name === "Reseller" || name === "Agency") continue;
+    if (name === "Lead Generator" || name === "Referral" || name === "Reseller" || name === "Agency") continue;
     if (country === "Based In") continue;
     if (r[7] && r[7].trim() === "TOTAL") continue;
 
@@ -269,7 +269,7 @@ export async function fetchAllData() {
   const perf = parsePerformance(perfRows);
 
   const partners = {
-    leadGenerators: parsePartnerSheet(refRows, "Referral"),
+    leadGenerators: parsePartnerSheet(refRows, "Lead Generator"),
     resellers: parsePartnerSheet(resRows, "Reseller"),
     agencies: parsePartnerSheet(agRows, "Agency"),
   };
