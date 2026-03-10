@@ -12,9 +12,6 @@ const SHEET_URLS = {
   referrals: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS44A9WaJHn9l_I9CDTcLnFgRD5oRjtKW90L8y3q-fc1PI4qC-FcSIftjkKW0vk77W_CnB51k2CcGFH/pub?gid=0&single=true&output=csv",
   resellers: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS44A9WaJHn9l_I9CDTcLnFgRD5oRjtKW90L8y3q-fc1PI4qC-FcSIftjkKW0vk77W_CnB51k2CcGFH/pub?gid=698698364&single=true&output=csv",
   agencies: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS44A9WaJHn9l_I9CDTcLnFgRD5oRjtKW90L8y3q-fc1PI4qC-FcSIftjkKW0vk77W_CnB51k2CcGFH/pub?gid=1988093832&single=true&output=csv",
-  // Churn sheets - TODO: add URLs after publishing
-  resellersChurn: "",
-  agenciesChurn: "",
 };
 
 function parseCSV(text) {
@@ -144,6 +141,30 @@ function parsePerformance(rows) {
   const agTargetPct = rows[23] ? num(rows[23][14]) : 0.1;
   const agTargetAnnual = rows[24] ? num(rows[24][14]) : 0;
 
+  // Resellers Churn
+  const resChurnSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Resellers Churn"));
+  const resChurnRows = resChurnSection >= 0 ? rows.slice(resChurnSection) : [];
+  const resChurnedARR = getMonthlyValues(findRow(resChurnRows, "Deals Churned ARR"));
+  const resChurnedMRR = getMonthlyValues(findRow(resChurnRows, "Deals Churned MRR"));
+
+  // Agencies Churn
+  const agChurnSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Agencies Churn"));
+  const agChurnRows = agChurnSection >= 0 ? rows.slice(agChurnSection) : [];
+  const agChurnedARR = getMonthlyValues(findRow(agChurnRows, "Deals Churned ARR"));
+  const agChurnedMRR = getMonthlyValues(findRow(agChurnRows, "Deals Churned MRR"));
+
+  // Resellers Growth
+  const resGrowthSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Resellers Growth"));
+  const resGrowthRows = resGrowthSection >= 0 ? rows.slice(resGrowthSection) : [];
+  const resGrowthARR = getMonthlyValues(findRow(resGrowthRows, "Deals Growth ARR"));
+  const resGrowthMRR = getMonthlyValues(findRow(resGrowthRows, "Deals Growth MRR"));
+
+  // Agencies Growth
+  const agGrowthSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Agencies Growth"));
+  const agGrowthRows = agGrowthSection >= 0 ? rows.slice(agGrowthSection) : [];
+  const agGrowthARR = getMonthlyValues(findRow(agGrowthRows, "Deals Growth ARR"));
+  const agGrowthMRR = getMonthlyValues(findRow(agGrowthRows, "Deals Growth MRR"));
+
   return {
     currentMonthIdx,
     totalClosedARR,
@@ -154,6 +175,10 @@ function parsePerformance(rows) {
     referrals: { closedARR: refClosedARR, closedMRR: refClosedMRR, targetMRR: refTarget },
     resellers: { closedARR: resClosedARR, closedMRR: resClosedMRR, targetMRR: resTarget },
     agencies: { closedARR: agClosedARR, closedMRR: agClosedMRR, targetMRR: agTarget },
+    resellersChurn: { churnedARR: resChurnedARR, churnedMRR: resChurnedMRR },
+    agenciesChurn: { churnedARR: agChurnedARR, churnedMRR: agChurnedMRR },
+    resellersGrowth: { growthARR: resGrowthARR, growthMRR: resGrowthMRR },
+    agenciesGrowth: { growthARR: agGrowthARR, growthMRR: agGrowthMRR },
     refTargetPct,
     resTargetPct,
     agTargetPct,
@@ -217,49 +242,13 @@ function parsePartnerSheet(rows, nameLabel) {
   return partners;
 }
 
-function parseChurnSheet(rows, nameLabel) {
-  const headerIdx = rows.findIndex((r) => r[1] && r[1].trim().includes(nameLabel));
-  if (headerIdx < 0) return [];
-
-  const partners = [];
-  for (let i = headerIdx + 1; i < rows.length; i++) {
-    const r = rows[i];
-    const name = r[1] ? r[1].trim() : "";
-    if (!name || name === "") continue;
-    if (name === "Reseller" || name === "Agency") continue;
-    const country = r[2] ? r[2].trim() : "";
-    if (country === "Based In") continue;
-    if (r[7] && r[7].trim() === "TOTAL") continue;
-
-    const churnARR = num(r[8]);
-    const churnMRR = Array.from({ length: 12 }, (_, m) => num(r[m + 11]));
-
-    partners.push({
-      name,
-      country,
-      churnARR,
-      churnMRR,
-    });
-  }
-  return partners;
-}
-
 export async function fetchAllData() {
-  const fetches = [
+  const [perfText, refText, resText, agText] = await Promise.all([
     fetch(SHEET_URLS.performance).then((r) => r.text()),
     fetch(SHEET_URLS.referrals).then((r) => r.text()),
     fetch(SHEET_URLS.resellers).then((r) => r.text()),
     fetch(SHEET_URLS.agencies).then((r) => r.text()),
-  ];
-
-  // Only fetch churn sheets if URLs are configured
-  const hasResChurn = !!SHEET_URLS.resellersChurn;
-  const hasAgChurn = !!SHEET_URLS.agenciesChurn;
-  if (hasResChurn) fetches.push(fetch(SHEET_URLS.resellersChurn).then((r) => r.text()));
-  if (hasAgChurn) fetches.push(fetch(SHEET_URLS.agenciesChurn).then((r) => r.text()));
-
-  const results = await Promise.all(fetches);
-  const [perfText, refText, resText, agText] = results;
+  ]);
 
   const perfRows = parseCSV(perfText);
   const refRows = parseCSV(refText);
@@ -274,10 +263,5 @@ export async function fetchAllData() {
     agencies: parsePartnerSheet(agRows, "Agency"),
   };
 
-  const churn = {
-    resellers: hasResChurn ? parseChurnSheet(parseCSV(results[4]), "Reseller") : [],
-    agencies: hasAgChurn ? parseChurnSheet(parseCSV(results[hasResChurn ? 5 : 4]), "Agency") : [],
-  };
-
-  return { perf, partners, churn };
+  return { perf, partners };
 }

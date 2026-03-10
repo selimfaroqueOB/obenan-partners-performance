@@ -255,6 +255,20 @@ export default function App() {
     return { month: m, "Actual Cumulative": i <= currentMonthIdx ? actual : null, "Target Cumulative": target };
   });
 
+  const zeros = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const churnMRRMonthly = (PERF.resellersChurn?.churnedMRR || zeros).map((v, i) => v + (PERF.agenciesChurn?.churnedMRR || zeros)[i]);
+  const growthMRRMonthly = (PERF.resellersGrowth?.growthMRR || zeros).map((v, i) => v + (PERF.agenciesGrowth?.growthMRR || zeros)[i]);
+  const periodChurnMRR = churnMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
+  const periodGrowthMRR = growthMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
+  const periodNetGrowthMRR = periodGrowthMRR - periodChurnMRR;
+
+  const churnGrowthData = MONTHS.map((m, i) => ({
+    month: m,
+    "Growth MRR": growthMRRMonthly[i],
+    "Churn MRR": churnMRRMonthly[i],
+    "Net MRR": growthMRRMonthly[i] - churnMRRMonthly[i],
+  }));
+
   const inactiveCount = allPartners.filter(p => p.arr === 0 && p.ytdMRR === 0).length;
   const activeCount = allPartners.length - inactiveCount;
 
@@ -589,6 +603,36 @@ export default function App() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* Churn & Net Growth */}
+        <SectionTitle sub={`Monthly churn and growth MRR (Resellers + Agencies) — ${periodLabel}`}>Churn & Net Growth</SectionTitle>
+        <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+          <KPICard label={`${periodLabel} Churn MRR`} value={fmtFull(periodChurnMRR)}
+            accent="#F87171" status="negative" />
+          <KPICard label={`${periodLabel} Net Growth MRR`} value={`${periodNetGrowthMRR >= 0 ? "+" : ""}${fmtFull(periodNetGrowthMRR)}`}
+            accent={periodNetGrowthMRR >= 0 ? "#4ADE80" : "#F87171"}
+            status={periodNetGrowthMRR >= 0 ? "positive" : "negative"} />
+        </div>
+        <div style={{
+          background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 16, padding: 24, marginBottom: 40,
+        }}>
+          <ResponsiveContainer width="100%" height={320}>
+            <ComposedChart data={churnGrowthData} barGap={4}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="month" tick={{ fill: "#6B7585", fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#6B7585", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend
+                wrapperStyle={{ paddingTop: 16 }}
+                formatter={(value) => <span style={{ color: "#8B95A5", fontSize: 12 }}>{value}</span>}
+              />
+              <Bar dataKey="Growth MRR" fill="#4ADE80" name="Growth MRR" radius={[4,4,0,0]} />
+              <Bar dataKey="Churn MRR" fill="#F87171" name="Churn MRR" radius={[4,4,0,0]} />
+              <Line type="monotone" dataKey="Net MRR" stroke="#7CB5E8" strokeWidth={2.5} dot={{ fill: "#7CB5E8", r: 4 }} name="Net MRR" />
+            </ComposedChart>
+          </ResponsiveContainer>
         </div>
 
         {/* Partner Table */}
