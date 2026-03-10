@@ -13,7 +13,7 @@ export const CURRENT_MONTH_IDX = 0; // <-- UPDATE THIS EACH MONTH
 export const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 export const CHANNEL_COLORS = {
-  Referrals: "#E8927C",
+  "Lead Generators": "#E8927C",
   Resellers: "#7CB5E8",
   Agencies: "#A8D5A2",
 };
@@ -31,7 +31,7 @@ export const PERF = {
   companyGrowthMRR: [4034.64, 6722.42, 9248.14, 11200.52, 12320.57, 13552.63, 10435.52, 11166.01, 17068.05, 18774.85, 20652.34, 15902.30],
   companyGrowthPct: [0.044, 0.07, 0.09, 0.10, 0.10, 0.10, 0.07, 0.07, 0.10, 0.10, 0.10, 0.07],
 
-  referrals: {
+  leadGenerators: {
     closedADV: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     closedMRR: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     targetMRR: [181.56, 302.51, 416.17, 504.02, 554.43, 609.87, 469.60, 502.47, 768.06, 844.87, 929.36, 715.60],
@@ -57,7 +57,7 @@ export const PERF = {
 // mrrAvg: historical average monthly MRR
 
 export const PARTNERS = {
-  referrals: [
+  leadGenerators: [
     { name: "Orjuela, Juan", country: "Colombia", adv: 47265, mrrAvg: 174.61, adv2026: 0, mrr2026: [0,0,0,0,0,0,0,0,0,0,0,0], commission: "4-6% indirect", start: "2024-02" },
     { name: "Vega, Hensey (Lebrand)", country: "Colombia", adv: 33793, mrrAvg: 244.70, adv2026: 0, mrr2026: [0,0,0,0,0,0,0,0,0,0,0,0], commission: "25% direct", start: "2025-01" },
     { name: "Kutval, Alphan", country: "Spain", adv: 31920, mrrAvg: 233.13, adv2026: 0, mrr2026: [0,0,0,0,0,0,0,0,0,0,0,0], commission: "10% direct", start: "2025-01" },

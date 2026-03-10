@@ -164,10 +164,11 @@ export default function App() {
   const allPartners = useMemo(() => {
     if (!PARTNERS) return [];
     const list = [];
-    ["referrals", "resellers", "agencies"].forEach(ch => {
+    const channelMap = { leadGenerators: "Lead Generators", resellers: "Resellers", agencies: "Agencies" };
+    ["leadGenerators", "resellers", "agencies"].forEach(ch => {
       (PARTNERS[ch] || []).forEach(p => {
         const ytd = p.mrr2026.reduce((a, b) => a + b, 0);
-        list.push({ ...p, channel: ch.charAt(0).toUpperCase() + ch.slice(1), ytdMRR: ytd });
+        list.push({ ...p, channel: channelMap[ch], ytdMRR: ytd });
       });
     });
     return list;
@@ -224,12 +225,12 @@ export default function App() {
 
   const channelSummary = [
     {
-      name: "Referrals",
-      actual: PERF.referrals.closedMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
-      target: PERF.referrals.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
+      name: "Lead Generators",
+      actual: PERF.leadGenerators.closedMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
+      target: PERF.leadGenerators.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
       allocation: "No target",
-      partners: PARTNERS.referrals.length,
-      active: PARTNERS.referrals.filter(p => p.arr > 0 || p.mrr2026.reduce((a, b) => a + b, 0) > 0).length,
+      partners: PARTNERS.leadGenerators.length,
+      active: PARTNERS.leadGenerators.filter(p => p.arr > 0 || p.mrr2026.reduce((a, b) => a + b, 0) > 0).length,
     },
     {
       name: "Resellers",
@@ -358,7 +359,7 @@ export default function App() {
         <SectionTitle sub={`Actual vs. target by partner channel — ${periodLabel}`}>Channel Performance</SectionTitle>
         <div style={{ display: "flex", gap: 16, marginBottom: 40, flexWrap: "wrap" }}>
           {channelSummary.map(ch => {
-            const isReferrals = ch.name === "Referrals";
+            const isLeadGen = ch.name === "Lead Generators";
             const ratio = ch.target > 0 ? ch.actual / ch.target : 0;
             const isOver = ratio >= 1;
             return (
@@ -371,21 +372,21 @@ export default function App() {
                     <div style={{ width: 12, height: 12, borderRadius: 4, background: CHANNEL_COLORS[ch.name] }} />
                     <span style={{ fontWeight: 600, fontSize: 15 }}>{ch.name}</span>
                   </div>
-                  <span style={{ fontSize: 12, color: "#6B7585" }}>{isReferrals ? "No target" : `Allocation: ${ch.allocation}`}</span>
+                  <span style={{ fontSize: 12, color: "#6B7585" }}>{isLeadGen ? "No target" : `Allocation: ${ch.allocation}`}</span>
                 </div>
                 <div style={{ display: "flex", gap: 24, marginBottom: 16 }}>
                   <div>
                     <div style={{ fontSize: 11, color: "#6B7585", textTransform: "uppercase", letterSpacing: "0.08em" }}>Actual</div>
                     <div style={{ fontSize: 24, fontWeight: 700 }}>{fmtFull(ch.actual)}</div>
                   </div>
-                  {!isReferrals && (
+                  {!isLeadGen && (
                     <div>
                       <div style={{ fontSize: 11, color: "#6B7585", textTransform: "uppercase", letterSpacing: "0.08em" }}>Target</div>
                       <div style={{ fontSize: 24, fontWeight: 700, color: "#6B7585" }}>{fmtFull(Math.round(ch.target))}</div>
                     </div>
                   )}
                 </div>
-                {!isReferrals && (
+                {!isLeadGen && (
                   <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 6, height: 8, overflow: "hidden", marginBottom: 12 }}>
                     <div style={{
                       height: "100%", borderRadius: 6,
@@ -396,8 +397,8 @@ export default function App() {
                   </div>
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                  {!isReferrals && <span style={{ color: isOver ? "#4ADE80" : "#F87171", fontWeight: 600 }}>{pct(ratio)} achieved</span>}
-                  <span style={{ color: "#6B7585", marginLeft: isReferrals ? "auto" : undefined }}>{ch.active}/{ch.partners} active</span>
+                  {!isLeadGen && <span style={{ color: isOver ? "#4ADE80" : "#F87171", fontWeight: 600 }}>{pct(ratio)} achieved</span>}
+                  <span style={{ color: "#6B7585", marginLeft: isLeadGen ? "auto" : undefined }}>{ch.active}/{ch.partners} active</span>
                 </div>
               </div>
             );
@@ -416,7 +417,7 @@ export default function App() {
           ];
           const totalAnnualTarget = annualTargetData.reduce((a, b) => a + b.value, 0);
           const partnerDistData = [
-            { name: "Referrals", value: PARTNERS.referrals.length, color: CHANNEL_COLORS.Referrals },
+            { name: "Lead Generators", value: PARTNERS.leadGenerators.length, color: CHANNEL_COLORS["Lead Generators"] },
             { name: "Resellers", value: PARTNERS.resellers.length, color: CHANNEL_COLORS.Resellers },
             { name: "Agencies", value: PARTNERS.agencies.length, color: CHANNEL_COLORS.Agencies },
           ];
@@ -642,7 +643,7 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, marginBottom: 20 }}>
             <SectionTitle sub="Click column headers to sort · Filter by channel or toggle inactive partners">Partner Breakdown</SectionTitle>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              {["all", "Referrals", "Resellers", "Agencies"].map(ch => (
+              {["all", "Lead Generators", "Resellers", "Agencies"].map(ch => (
                 <button key={ch} onClick={() => setSelectedChannel(ch)} style={btnStyle(selectedChannel === ch)}>
                   {ch === "all" ? "All Channels" : ch}
                 </button>
@@ -761,7 +762,7 @@ export default function App() {
         {(() => {
           const noContractPartners = allPartners.filter(p => p.contract === "X");
           const byChannel = {
-            Referrals: noContractPartners.filter(p => p.channel === "Referrals"),
+            "Lead Generators": noContractPartners.filter(p => p.channel === "Lead Generators"),
             Resellers: noContractPartners.filter(p => p.channel === "Resellers"),
             Agencies: noContractPartners.filter(p => p.channel === "Agencies"),
           };

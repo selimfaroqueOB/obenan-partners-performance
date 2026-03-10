@@ -9,7 +9,7 @@
 
 const SHEET_URLS = {
   performance: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS44A9WaJHn9l_I9CDTcLnFgRD5oRjtKW90L8y3q-fc1PI4qC-FcSIftjkKW0vk77W_CnB51k2CcGFH/pub?gid=359741855&single=true&output=csv",
-  referrals: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS44A9WaJHn9l_I9CDTcLnFgRD5oRjtKW90L8y3q-fc1PI4qC-FcSIftjkKW0vk77W_CnB51k2CcGFH/pub?gid=0&single=true&output=csv",
+  leadGenerators: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS44A9WaJHn9l_I9CDTcLnFgRD5oRjtKW90L8y3q-fc1PI4qC-FcSIftjkKW0vk77W_CnB51k2CcGFH/pub?gid=0&single=true&output=csv",
   resellers: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS44A9WaJHn9l_I9CDTcLnFgRD5oRjtKW90L8y3q-fc1PI4qC-FcSIftjkKW0vk77W_CnB51k2CcGFH/pub?gid=698698364&single=true&output=csv",
   agencies: "https://docs.google.com/spreadsheets/d/e/2PACX-1vS44A9WaJHn9l_I9CDTcLnFgRD5oRjtKW90L8y3q-fc1PI4qC-FcSIftjkKW0vk77W_CnB51k2CcGFH/pub?gid=1988093832&single=true&output=csv",
 };
@@ -109,7 +109,7 @@ function parsePerformance(rows) {
   const companyGrowthMRR = getMonthlyValues(findRow(rows, "Company Growth Target MRR"));
   const companyGrowthPct = getMonthlyValues(findRow(rows, "Company Growth Target %"));
 
-  // Referrals
+  // Lead Generators
   const refSection = rows.findIndex((r) => r[1] && r[1].trim().includes("Referrals Performance"));
   const refRows = refSection >= 0 ? rows.slice(refSection) : [];
   const refClosedARR = getMonthlyValues(findRow(refRows, "Deals Closed ARR"));
@@ -147,7 +147,7 @@ function parsePerformance(rows) {
   const agTargetPctRaw = agPctRow ? num(agPctRow[14]) : 0.1;
   const agTargetAnnual = agAnnualRow ? num(agAnnualRow[14]) : 0;
 
-  // Normalize percentages excluding Referrals: Resellers/(Resellers+Agencies), Agencies/(Resellers+Agencies)
+  // Normalize percentages excluding Lead Generators: Resellers/(Resellers+Agencies), Agencies/(Resellers+Agencies)
   const resAgTotal = resTargetPctRaw + agTargetPctRaw;
   const resTargetPct = resAgTotal > 0 ? resTargetPctRaw / resAgTotal : 0.86;
   const agTargetPct = resAgTotal > 0 ? agTargetPctRaw / resAgTotal : 0.14;
@@ -173,7 +173,7 @@ function parsePerformance(rows) {
     totalTargetMRR,
     companyGrowthMRR,
     companyGrowthPct,
-    referrals: { closedARR: refClosedARR, closedMRR: refClosedMRR, targetMRR: refTarget },
+    leadGenerators: { closedARR: refClosedARR, closedMRR: refClosedMRR, targetMRR: refTarget },
     resellers: { closedARR: resClosedARR, closedMRR: resClosedMRR, targetMRR: resTarget },
     agencies: { closedARR: agClosedARR, closedMRR: agClosedMRR, targetMRR: agTarget },
     totalChurn: { churnedARR: totalChurnedARR, churnedMRR: totalChurnedMRR },
@@ -256,7 +256,7 @@ function parsePartnerSheet(rows, nameLabel) {
 export async function fetchAllData() {
   const [perfText, refText, resText, agText] = await Promise.all([
     fetch(SHEET_URLS.performance).then((r) => r.text()),
-    fetch(SHEET_URLS.referrals).then((r) => r.text()),
+    fetch(SHEET_URLS.leadGenerators).then((r) => r.text()),
     fetch(SHEET_URLS.resellers).then((r) => r.text()),
     fetch(SHEET_URLS.agencies).then((r) => r.text()),
   ]);
@@ -269,7 +269,7 @@ export async function fetchAllData() {
   const perf = parsePerformance(perfRows);
 
   const partners = {
-    referrals: parsePartnerSheet(refRows, "Referral"),
+    leadGenerators: parsePartnerSheet(refRows, "Referral"),
     resellers: parsePartnerSheet(resRows, "Reseller"),
     agencies: parsePartnerSheet(agRows, "Agency"),
   };
