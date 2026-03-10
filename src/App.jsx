@@ -207,7 +207,7 @@ export default function App() {
   const toIdx = Math.max(periodFrom, periodTo);
 
   const periodMRR = PERF.totalClosedMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
-  const periodTargetMRR = PERF.totalTargetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
+  const periodTargetMRR = PERF.resellers.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0) + PERF.agencies.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
   const periodARR = PERF.totalClosedARR ? PERF.totalClosedARR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0) : 0;
   const achievement = periodTargetMRR > 0 ? periodMRR / periodTargetMRR : 0;
   const variance = periodMRR - periodTargetMRR;
@@ -225,7 +225,7 @@ export default function App() {
       name: "Referrals",
       actual: PERF.referrals.closedMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
       target: PERF.referrals.targetMRR.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0),
-      allocation: "30%",
+      allocation: "No target",
       partners: PARTNERS.referrals.length,
       active: PARTNERS.referrals.filter(p => p.arr > 0 || p.mrr2026.reduce((a, b) => a + b, 0) > 0).length,
     },
@@ -340,6 +340,7 @@ export default function App() {
         <SectionTitle sub={`Actual vs. target by partner channel — ${periodLabel}`}>Channel Performance</SectionTitle>
         <div style={{ display: "flex", gap: 16, marginBottom: 40, flexWrap: "wrap" }}>
           {channelSummary.map(ch => {
+            const isReferrals = ch.name === "Referrals";
             const ratio = ch.target > 0 ? ch.actual / ch.target : 0;
             const isOver = ratio >= 1;
             return (
@@ -352,29 +353,33 @@ export default function App() {
                     <div style={{ width: 12, height: 12, borderRadius: 4, background: CHANNEL_COLORS[ch.name] }} />
                     <span style={{ fontWeight: 600, fontSize: 15 }}>{ch.name}</span>
                   </div>
-                  <span style={{ fontSize: 12, color: "#6B7585" }}>Allocation: {ch.allocation}</span>
+                  <span style={{ fontSize: 12, color: "#6B7585" }}>{isReferrals ? "No target" : `Allocation: ${ch.allocation}`}</span>
                 </div>
                 <div style={{ display: "flex", gap: 24, marginBottom: 16 }}>
                   <div>
                     <div style={{ fontSize: 11, color: "#6B7585", textTransform: "uppercase", letterSpacing: "0.08em" }}>Actual</div>
                     <div style={{ fontSize: 24, fontWeight: 700 }}>{fmtFull(ch.actual)}</div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#6B7585", textTransform: "uppercase", letterSpacing: "0.08em" }}>Target</div>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: "#6B7585" }}>{fmtFull(Math.round(ch.target))}</div>
+                  {!isReferrals && (
+                    <div>
+                      <div style={{ fontSize: 11, color: "#6B7585", textTransform: "uppercase", letterSpacing: "0.08em" }}>Target</div>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: "#6B7585" }}>{fmtFull(Math.round(ch.target))}</div>
+                    </div>
+                  )}
+                </div>
+                {!isReferrals && (
+                  <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 6, height: 8, overflow: "hidden", marginBottom: 12 }}>
+                    <div style={{
+                      height: "100%", borderRadius: 6,
+                      width: `${Math.min(ratio * 100, 100)}%`,
+                      background: isOver ? `linear-gradient(90deg, ${CHANNEL_COLORS[ch.name]}, #4ADE80)` : CHANNEL_COLORS[ch.name],
+                      transition: "width 0.6s ease",
+                    }} />
                   </div>
-                </div>
-                <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 6, height: 8, overflow: "hidden", marginBottom: 12 }}>
-                  <div style={{
-                    height: "100%", borderRadius: 6,
-                    width: `${Math.min(ratio * 100, 100)}%`,
-                    background: isOver ? `linear-gradient(90deg, ${CHANNEL_COLORS[ch.name]}, #4ADE80)` : CHANNEL_COLORS[ch.name],
-                    transition: "width 0.6s ease",
-                  }} />
-                </div>
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                  <span style={{ color: isOver ? "#4ADE80" : "#F87171", fontWeight: 600 }}>{pct(ratio)} achieved</span>
-                  <span style={{ color: "#6B7585" }}>{ch.active}/{ch.partners} active</span>
+                  {!isReferrals && <span style={{ color: isOver ? "#4ADE80" : "#F87171", fontWeight: 600 }}>{pct(ratio)} achieved</span>}
+                  <span style={{ color: "#6B7585", marginLeft: isReferrals ? "auto" : undefined }}>{ch.active}/{ch.partners} active</span>
                 </div>
               </div>
             );
@@ -383,13 +388,14 @@ export default function App() {
 
         {/* Pie Charts Row */}
         {(() => {
+          const resPct = PERF.resTargetPct || 0.6;
+          const agPct = PERF.agTargetPct || 0.1;
+          const totalPct = resPct + agPct;
           const allocationData = [
-            { name: "Referrals", value: (PERF.refTargetPct || 0.3) * 100, color: CHANNEL_COLORS.Referrals },
-            { name: "Resellers", value: (PERF.resTargetPct || 0.6) * 100, color: CHANNEL_COLORS.Resellers },
-            { name: "Agencies", value: (PERF.agTargetPct || 0.1) * 100, color: CHANNEL_COLORS.Agencies },
+            { name: "Resellers", value: Math.round((resPct / totalPct) * 100), color: CHANNEL_COLORS.Resellers },
+            { name: "Agencies", value: Math.round((agPct / totalPct) * 100), color: CHANNEL_COLORS.Agencies },
           ];
           const annualTargetData = [
-            { name: "Referrals", value: PERF.refTargetAnnual || 0, color: CHANNEL_COLORS.Referrals },
             { name: "Resellers", value: PERF.resTargetAnnual || 0, color: CHANNEL_COLORS.Resellers },
             { name: "Agencies", value: PERF.agTargetAnnual || 0, color: CHANNEL_COLORS.Agencies },
           ];
