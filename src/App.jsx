@@ -258,15 +258,15 @@ export default function App() {
 
   const zeros = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   const churnMRRMonthly = PERF.totalChurn?.churnedMRR || zeros;
-  const growthMRRMonthly = PERF.totalGrowth?.growthMRR || zeros;
+  const grossMRRMonthly = PERF.totalClosedMRR || zeros;
   const periodChurnMRR = churnMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
-  const periodNetGrowthMRR = growthMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0);
+  const periodNetGrowthMRR = grossMRRMonthly.slice(fromIdx, toIdx + 1).reduce((a, b) => a + b, 0) - periodChurnMRR;
 
   const churnGrowthData = MONTHS.map((m, i) => ({
     month: m,
     "MRR Churn": churnMRRMonthly[i],
-    "MRR Growth": growthMRRMonthly[i],
-    "Net Growth": growthMRRMonthly[i],
+    "MRR Growth": grossMRRMonthly[i],
+    "Net Growth": grossMRRMonthly[i] - churnMRRMonthly[i],
   }));
 
   const inactiveCount = allPartners.filter(p => p.arr === 0 && p.ytdMRR === 0).length;
