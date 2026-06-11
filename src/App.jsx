@@ -67,13 +67,22 @@ function StatusDot({ value }) {
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
+  const order = ["Target", "Total Actual"];
+  const sorted = [...payload].sort((a, b) => {
+    const ai = order.indexOf(a.name);
+    const bi = order.indexOf(b.name);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
   return (
     <div style={{
       background: "#1E2433", border: "1px solid rgba(255,255,255,0.12)",
       borderRadius: 10, padding: "12px 16px", fontSize: 13,
     }}>
       <div style={{ fontWeight: 600, color: "#F0F2F5", marginBottom: 6 }}>{label}</div>
-      {payload.map((p, i) => (
+      {sorted.map((p, i) => (
         <div key={i} style={{ color: p.color, marginTop: 3 }}>
           {p.name}: {fmtFull(Math.round(p.value))}
         </div>
@@ -220,6 +229,7 @@ export default function App() {
     month: m,
     "Resellers Actual": PERF.resellers.closedMRR[i],
     "Agencies Actual": PERF.agencies.closedMRR[i],
+    "Total Actual": PERF.resellers.closedMRR[i] + PERF.agencies.closedMRR[i],
     "Target": PERF.resellers.targetMRR[i] + PERF.agencies.targetMRR[i],
   }));
 
@@ -584,6 +594,7 @@ export default function App() {
                 <Bar dataKey="Target" fill="#4A5568" name="Target" radius={[4,4,0,0]} />
                 <Bar dataKey="Resellers Actual" stackId="a" fill={CHANNEL_COLORS.Resellers} name="Resellers Actual" />
                 <Bar dataKey="Agencies Actual" stackId="a" fill={CHANNEL_COLORS.Agencies} radius={[4,4,0,0]} name="Agencies Actual" />
+                <Line type="monotone" dataKey="Total Actual" stroke="#67E8F9" strokeWidth={2} strokeDasharray="5 4" dot={{ fill: "#67E8F9", r: 3 }} name="Total Actual" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
